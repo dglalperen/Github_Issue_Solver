@@ -2,6 +2,8 @@ import requests
 import json
 import openai
 import os
+import git
+from llama_index import GPTSimpleVectorIndex, SimpleDirectoryReader
 from datetime import datetime
 
 # Get the value of an environment variable
@@ -71,10 +73,33 @@ def display_issue(issue):
     print(f'URL: {issue["html_url"]}')
     print(f'\n{issue["body"]}\n')
 
+def createTempDir():
+    if not os.path.exists('./tmpRepo'):
+        os.mkdir('./tmpRepo')
+    else:
+        os.rmdir('./tmpRepo') #remove if dir exists, to prevent indexing an old repo
+        os.mkdir('./tmpRepo')
+
+def cloneRepo(repo_url):
+    git.Repo.clone(repo_url,'./tmpRepo')
+
+def getRepoName(repo_url):
+    response = requests.get(repo_url)
+    repo_name = response.json()['name']
+    return repo_name
+def indexContext(repoName):
+    documents = SimpleDirectoryReader('data').load_data()
+    index = GPTSimpleVectorIndex.from_documents(documents)
+    index.save_to_disk(repoName+"_index.json")
+
 
 if __name__ == '__main__':
     repo_url = input("Please enter the GitHub repository URL: ")
+    repoName = getRepoName(repo_url)
     issues = get_issues_from_github_repo(repo_url)
+    createTempDir()
+    cloneRepo(repo_url)
+    context = indexContext(repoName)
 
     if issues:
         for issue in issues:

@@ -1,0 +1,4 @@
+requests~=2.28.2
+openai~=0.27.4
+llama_index~=0.5.13
+tiktoken~=0.3.3
