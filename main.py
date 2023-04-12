@@ -1,14 +1,12 @@
 import requests
 import json
-import os
 import openai
+import os
 from datetime import datetime
 
 # Get the value of an environment variable
-openai.api_key = "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"
-
-
-# print(f"---API KEY: {os.environ.get('API_KEY')}")
+api_key = os.environ['API_KEY']
+openai.api_key = api_key
 
 def get_issues_from_github_repo(repo_url):
     repo_path = repo_url.replace('https://github.com/', '')
@@ -36,29 +34,26 @@ def get_issues_from_github_repo(repo_url):
     return all_issues
 
 
-def ask_chatgpt(prompt):
+def ask_chatgpt(prompt, context=None):
+    messages = [{"role": "system",
+                 "content": "You are an AI language model, and your task is to help users with their GitHub issues."}]
+
+    if context:
+        messages.append({"role": "user", "content": context})
+
+    messages.append({"role": "user", "content": prompt})
+
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": f"{prompt}"}
-        ]
+        messages=messages
     )
-
-    # openai.Completion.create(
-    #     engine="gpt-3.5-turbo",
-    #     prompt=prompt,
-    #     max_tokens=150,
-    #     n=1,
-    #     stop=None,
-    #     temperature=0.5,
-    # )
 
     message = response['choices'][0]['message']['content']
     return message
 
 
 def save_response_to_file(issue_number, response):
-    date_str = datetime.now().strftime("%Y-%m-%d-%hh-%mm")
+    date_str = datetime.now().strftime("%Y-%m-%d-%h-%m")
     file_name = f'Issue_{issue_number}_{date_str}.txt'
 
     with open(file_name, 'w') as file:
@@ -78,7 +73,7 @@ def display_issue(issue):
 
 
 if __name__ == '__main__':
-    repo_url = 'https://github.com/ory/kratos-selfservice-ui-react-native'  # Replace with the repository URL
+    repo_url = input("Please enter the GitHub repository URL: ")
     issues = get_issues_from_github_repo(repo_url)
 
     if issues:
@@ -93,11 +88,14 @@ if __name__ == '__main__':
 
                 selected_issue = next((issue for issue in issues if issue['number'] == selected_issue_number), None)
                 if selected_issue:
-                    # display_issue(selected_issue)
+                    display_issue(selected_issue)
 
+                    context = f'The GitHub repository URL is "{repo_url}".'
                     prompt = f'Please help me understand the following GitHub issue and suggest a possible solution: "{selected_issue["title"]}". The issue description is: "{selected_issue["body"]}".'
-                    response = ask_chatgpt(prompt)
+
+                    response = ask_chatgpt(prompt, context)
                     print(f'\nChatGPT response: {response}\n')
+
                     save_response_to_file(selected_issue["number"], response)
                 else:
                     print('Invalid issue number.')
