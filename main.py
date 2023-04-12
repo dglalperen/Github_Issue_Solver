@@ -1,6 +1,14 @@
 import requests
 import json
+import os
+import openai
+from datetime import datetime
 
+# Get the value of an environment variable
+openai.api_key = "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"
+
+
+# print(f"---API KEY: {os.environ.get('API_KEY')}")
 
 def get_issues_from_github_repo(repo_url):
     repo_path = repo_url.replace('https://github.com/', '')
@@ -26,6 +34,37 @@ def get_issues_from_github_repo(repo_url):
             return None
 
     return all_issues
+
+
+def ask_chatgpt(prompt):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": f"{prompt}"}
+        ]
+    )
+
+    # openai.Completion.create(
+    #     engine="gpt-3.5-turbo",
+    #     prompt=prompt,
+    #     max_tokens=150,
+    #     n=1,
+    #     stop=None,
+    #     temperature=0.5,
+    # )
+
+    message = response['choices'][0]['message']['content']
+    return message
+
+
+def save_response_to_file(issue_number, response):
+    date_str = datetime.now().strftime("%Y-%m-%d-%hh-%mm")
+    file_name = f'Issue_{issue_number}_{date_str}.txt'
+
+    with open(file_name, 'w') as file:
+        file.write(response)
+
+    print(f'\nResponse saved to: {file_name}\n')
 
 
 def display_issue(issue):
@@ -54,7 +93,12 @@ if __name__ == '__main__':
 
                 selected_issue = next((issue for issue in issues if issue['number'] == selected_issue_number), None)
                 if selected_issue:
-                    display_issue(selected_issue)
+                    # display_issue(selected_issue)
+
+                    prompt = f'Please help me understand the following GitHub issue and suggest a possible solution: "{selected_issue["title"]}". The issue description is: "{selected_issue["body"]}".'
+                    response = ask_chatgpt(prompt)
+                    print(f'\nChatGPT response: {response}\n')
+                    save_response_to_file(selected_issue["number"], response)
                 else:
                     print('Invalid issue number.')
 
