@@ -7,13 +7,13 @@ from langchain.chains import ConversationalRetrievalChain
 
 from langchainLogic.indexer import indexRepo
 
-def promptLangchain(repoURL):
+def promptLangchain(repoURL,promptBody):
 
     os.environ['OPENAI_API_KEY'] = ""
 
 
     embeddings = OpenAIEmbeddings(disallowed_special=())
-
+    print("indexing repo")
     db = DeepLake(indexRepo(repoURL), read_only=True, embedding_function=embeddings)
 
     retriever = db.as_retriever()
@@ -21,7 +21,7 @@ def promptLangchain(repoURL):
     retriever.search_kwargs['fetch_k'] = 100
     retriever.search_kwargs['maximal_marginal_relevance'] = True
     retriever.search_kwargs['k'] = 10
-
+    print("loaded retriever")
     model = ChatOpenAI(model="gpt-3.5-turbo-0613")
     qa = ConversationalRetrievalChain.from_llm(model,retriever=retriever) # add verbose = True to see the full convo
 
@@ -30,6 +30,7 @@ def promptLangchain(repoURL):
         "Was ist das Ziel des Projekts?",
 
     ]
+    questions = ["Resolve the following issue in the given text. Print the only the code for the solution. The issue is delimited in XML Tags. <Issue> " + promptBody + "</Issue>"]
     chat_history = []
     for question in questions:
         result = qa({"question": question, "chat_history": chat_history})

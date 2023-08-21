@@ -4,6 +4,8 @@ import openai
 import os
 from datetime import datetime
 
+from langchainLogic.prompt import promptLangchain
+
 # Get the value of an environment variable
 api_key = os.environ['API_KEY']
 openai.api_key = api_key
@@ -88,15 +90,8 @@ if __name__ == '__main__':
 
                 selected_issue = next((issue for issue in issues if issue['number'] == selected_issue_number), None)
                 if selected_issue:
-                    display_issue(selected_issue)
-
-                    context = f'The GitHub repository URL is "{repo_url}".'
-                    prompt = f'Please help me understand the following GitHub issue and suggest a possible solution: "{selected_issue["title"]}". The issue description is: "{selected_issue["body"]}".'
-
-                    response = ask_chatgpt(prompt, context)
-                    print(f'\nChatGPT response: {response}\n')
-
-                    save_response_to_file(selected_issue["number"], response)
+                    issue_body = get_issue_body(selected_issue)
+                    promptLangchain(repo_url,issue_body)
                 else:
                     print('Invalid issue number.')
 

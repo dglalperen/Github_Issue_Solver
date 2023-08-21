@@ -7,6 +7,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from utils.fetchRepos import getRepo
 
 
+#from src.utils.fetchRepos import getTestRepo,readFromExcel
 
 def indexRepo(repoURL):
 
@@ -15,6 +16,7 @@ def indexRepo(repoURL):
 
     #Set to true if you want to include documentation files
     documentation = False
+    documentation = True
 
     embeddings = OpenAIEmbeddings(disallowed_special=())
     repoDir = getRepo(repoURL)
