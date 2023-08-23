@@ -73,6 +73,9 @@ def display_issue(issue):
     print(f'URL: {issue["html_url"]}')
     print(f'\n{issue["body"]}\n')
 
+def get_issue_body(issue):
+    print(f'\n{issue["body"]}\n')
+    return issue["body"]
 
 if __name__ == '__main__':
     repo_url = input("Please enter the GitHub repository URL: ")

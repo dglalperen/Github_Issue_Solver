@@ -15,7 +15,6 @@ def indexRepo(repoURL):
     os.environ['OPENAI_API_KEY'] = ""
 
     #Set to true if you want to include documentation files
-    documentation = False
     documentation = True
 
     embeddings = OpenAIEmbeddings(disallowed_special=())
@@ -57,7 +56,7 @@ def indexRepo(repoURL):
     texts = text_splitter.split_documents(docs)
 
     #embed the files and add them to the vector db
-    db = DeepLake(dataset_path="../vectordbs/"+repo_name, embedding_function=embeddings) #dataset would be publicly available
+    db = DeepLake(dataset_path="/vectordbs/"+repo_name, embedding_function=embeddings) #dataset would be publicly available
     db.add_documents(texts)
 
-    return str("../vectordbs/"+repo_name)
+    return str("/vectordbs/"+repo_name)
