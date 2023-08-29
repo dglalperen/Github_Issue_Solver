@@ -1,25 +1,25 @@
 import requests
 import json
-import openai
 import os
 from datetime import datetime
 
 from langchainLogic.prompt import promptLangchain
 
 # Get the value of an environment variable
-api_key = os.environ['API_KEY']
-openai.api_key = api_key
+api_key = os.environ["API_KEY"]
+os.environ["OPENAI_API_KEY"] = api_key  # Make sure the proper API key is set
+
 
 def get_issues_from_github_repo(repo_url):
-    repo_path = repo_url.replace('https://github.com/', '')
-    api_url = f'https://api.github.com/repos/{repo_path}/issues'
-    headers = {'Accept': 'application/vnd.github+json'}
+    repo_path = repo_url.replace("https://github.com/", "")
+    api_url = f"https://api.github.com/repos/{repo_path}/issues"
+    headers = {"Accept": "application/vnd.github+json"}
 
     all_issues = []
     page = 1
 
     while True:
-        params = {'page': page, 'per_page': 100, 'state': 'open'}
+        params = {"page": page, "per_page": 100, "state": "open"}
         response = requests.get(api_url, headers=headers, params=params)
 
         if response.status_code == 200:
@@ -30,38 +30,39 @@ def get_issues_from_github_repo(repo_url):
             all_issues.extend(issues)
             page += 1
         else:
-            print(f'Error: {response.status_code}')
+            print(f"Error: {response.status_code}")
             return None
 
     return all_issues
 
 
 def ask_chatgpt(prompt, context=None):
-    messages = [{"role": "system",
-                 "content": "You are an AI language model, and your task is to help users with their GitHub issues."}]
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an AI language model specializing in software development, with a focus on assisting users in resolving their GitHub issues. Utilizing your expertise in coding best practices and software design patterns, your task is to analyze problems, suggest solutions, and guide users in implementing fixes for their GitHub-related challenges.",
+        }
+    ]
 
     if context:
         messages.append({"role": "user", "content": context})
 
     messages.append({"role": "user", "content": prompt})
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages
-    )
+    response = openai.ChatCompletion.create(model="gpt-4", messages=messages)
 
-    message = response['choices'][0]['message']['content']
+    message = response["choices"][0]["message"]["content"]
     return message
 
 
 def save_response_to_file(issue_number, response):
     date_str = datetime.now().strftime("%Y-%m-%d-%h-%m")
-    file_name = f'Issue_{issue_number}_{date_str}.txt'
+    file_name = f"Issue_{issue_number}_{date_str}.txt"
 
-    with open(file_name, 'w') as file:
+    with open(file_name, "w") as file:
         file.write(response)
 
-    print(f'\nResponse saved to: {file_name}\n')
+    print(f"\nResponse saved to: {file_name}\n")
 
 
 def display_issue(issue):
@@ -77,28 +78,53 @@ def get_issue_body(issue):
     print(f'\n{issue["body"]}\n')
     return issue["body"]
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    print("Starting the main script...")
+
     repo_url = input("Please enter the GitHub repository URL: ")
+    print(f"Fetching issues from {repo_url}...")
     issues = get_issues_from_github_repo(repo_url)
 
     if issues:
+        print(f"Found {len(issues)} issues.")
         for issue in issues:
             print(f'#{issue["number"]}: {issue["title"]}')
 
         while True:
+            selected_issue_number_input = input(
+                "\nEnter the issue number you want to view (0 to exit): "
+            )
             try:
-                selected_issue_number = int(input("\nEnter the issue number you want to view (0 to exit): "))
+                selected_issue_number = int(selected_issue_number_input)
                 if selected_issue_number == 0:
                     break
 
-                selected_issue = next((issue for issue in issues if issue['number'] == selected_issue_number), None)
+                selected_issue = next(
+                    (
+                        issue
+                        for issue in issues
+                        if issue["number"] == selected_issue_number
+                    ),
+                    None,
+                )
                 if selected_issue:
-                    issue_body = get_issue_body(selected_issue)
-                    promptLangchain(repo_url,issue_body)
+                    display_issue(selected_issue)
+                    issue_body = selected_issue["body"]
+                    try:
+                        promptLangchain(
+                            repo_url, issue_body
+                        )  # Process the selected issue
+                    except ValueError as ve:
+                        print(f"ValueError in promptLangchain function: {ve}")
+                        continue
+                    print(
+                        "Issue processed and result saved in '../result/result.txt' file."
+                    )
                 else:
-                    print('Invalid issue number.')
-
+                    print("Invalid issue number.")
             except ValueError:
-                print('Invalid input. Please enter a valid issue number.')
+                print(
+                    f"Invalid input: {selected_issue_number_input}. Please enter a valid issue number."
+                )
     else:
-        print('No issues found or an error occurred.')
+        print("No issues found or an error occurred.")

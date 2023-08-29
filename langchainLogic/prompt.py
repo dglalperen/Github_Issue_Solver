@@ -7,15 +7,19 @@ from langchain.chains import ConversationalRetrievalChain
 
 from langchainLogic.indexer import indexRepo
 
-def promptLangchain(repoURL,promptBody):
 
-    os.environ['OPENAI_API_KEY'] = ""
+def promptLangchain(repoURL, promptBody):
+    print("Starting promptLangchain function...")
 
+    os.environ["OPENAI_API_KEY"] = os.environ["API_KEY"]
 
+    print("Initializing embeddings...")
     embeddings = OpenAIEmbeddings(disallowed_special=())
-    print("indexing repo")
+
+    print("Indexing repository...")
     db = DeepLake(indexRepo(repoURL), read_only=True, embedding_function=embeddings)
 
+    print("Configuring retriever...")
     retriever = db.as_retriever()
     retriever.search_kwargs['score_threshold'] = 0.8
     retriever.search_kwargs['fetch_k'] = 100
@@ -27,16 +31,29 @@ def promptLangchain(repoURL,promptBody):
     qa = ConversationalRetrievalChain.from_llm(model,retriever=retriever) # add verbose = True to see the full convo
 
 
-    #questions = ["Resolve the following issue in the given text. Provide the solution for the issue in a git.patch file format. The issue is delimited in XML Tags. <Issue> " + promptBody + "</Issue>"]
-    questions = ["What is the primary programming language used in this repository?"]
+    print("Loading chat model...")
+    model = ChatOpenAI(model="gpt-3.5-turbo-0613")
+    qa = ConversationalRetrievalChain.from_llm(
+        model, retriever=retriever
+    )  # add verbose = True to see the full convo
+
+    print("Preparing questions...")
+    questions = [
+        "Resolve the issue in the given text, which is delimited by XML tags. Print only the code for the solution. The issue is enclosed within: <Issue> "
+        + promptBody
+        + "</Issue>"
+    ]
+
+    print("Starting conversation retrieval...")
     chat_history = []
     for question in questions:
         result = qa({"question": question, "chat_history": chat_history})
-        ##chat_history.append((question, result['answer']))
         print(f"-> **Question**: {question} \n")
         print(f"**Answer**: {result['answer']} \n")
 
-        #append result into textfile in generatedDocs folder
-        with open("/result/result.txt", "a") as myfile:
-            myfile.write(result['answer']+"\n")
+        print("Appending result to text file...")
+        with open("../result/result.txt", "a") as myfile:
+            myfile.write(result["answer"] + "\n")
             myfile.close()
+
+    print("promptLangchain function completed.")
