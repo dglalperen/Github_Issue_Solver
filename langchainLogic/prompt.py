@@ -17,10 +17,11 @@ def promptLangchain(repoURL,promptBody):
     db = DeepLake(indexRepo(repoURL), read_only=True, embedding_function=embeddings)
 
     retriever = db.as_retriever()
-    retriever.search_kwargs['distance_metric'] = 'cos'
+    retriever.search_kwargs['score_threshold'] = 0.8
     retriever.search_kwargs['fetch_k'] = 100
-    retriever.search_kwargs['maximal_marginal_relevance'] = True
-    retriever.search_kwargs['k'] = 10
+    retriever.search_kwargs['search_type'] = 'mmr'
+    retriever.search_kwargs['lambda_mult'] = '0.7'
+    retriever.search_kwargs['k'] = 35
     print("loaded retriever")
     model = ChatOpenAI(model="gpt-3.5-turbo-0613")
     qa = ConversationalRetrievalChain.from_llm(model,retriever=retriever) # add verbose = True to see the full convo
