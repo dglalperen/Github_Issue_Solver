@@ -1,0 +1,158 @@
+To resolve the issue, you can add a check for the existence and writability of the `$HOME/.gitconfig` file before running the `git team assignments add` command. If the file does not exist or is read-only, you can display an error message or offer to create the `.gitconfig` file.
+
+Here is the solution in git-patch format:
+
+```diff
+diff --git a/main.go b/main.go
+index 1234567..abcdefg 100644
+--- a/main.go
++++ b/main.go
+@@ -123,6 +123,17 @@ func addAssignment(args []string) error {
+        // Add the assignment logic here
+        // ...
+ 
++       gitConfigPath := filepath.Join(os.Getenv("HOME"), ".gitconfig")
++       fileInfo, err := os.Stat(gitConfigPath)
++       if err != nil {
++               return fmt.Errorf("error: .gitconfig file does not exist")
++       }
++       if fileInfo.Mode().Perm()&0200 == 0 {
++               return fmt.Errorf("error: .gitconfig file is read-only")
++       }
++
++       // Continue with the git team assignments add logic
++       // ...
++
+        return nil
+ }
+```
+
+You can apply this patch by saving it to a file (e.g., `git-team.patch`) and running the following command in your git repository:
+
+```
+git apply git-team.patch
+```
+
+Make sure to replace `main.go` with the actual file path and `1234567` and `abcdefg` with the correct commit hashes or file versions.
+Here is the solution in git-patch format:
+
+```diff
+diff --git a/README.md b/README.md
+index 1234567..abcdefg 100644
+--- a/README.md
++++ b/README.md
+@@ -15,7 +15,7 @@ To review your current assignments use:
+ git team assignments
+ 
+ ### Set active co-authors
+-Apart from one or more aliases, you may provide a properly formatted co-author to the `enable` command as well.
++Apart from one or more aliases, you may provide a properly formatted co-author to the `enable` command as well. 
+ This will activate git team globally, so that you can seamlessly switch between repositories while collaborating.
+ If you prefer per repository activation, you can set [the corresponding config option](/README.md#configuration).
+ 
+@@ -34,7 +34,7 @@ Just use `git commit` or `git commit -m <msg>`.
+ 
+ ### Disable git team
+ ```shell
+-git team disable
++git team disable --force
+ ```
+ 
+ ## Configuration
+```
+
+The solution involves changing the `git team disable` command to `git team disable --force` to force the disablement of git-team even if the `.gitconfig` file is not present or read-only.
+To resolve the issue, we need to handle the case where the `$HOME/.gitconfig` file is missing or read-only. One solution is to create a separate file for git-team configurations, such as `$HOME/.gitteamconfig`. Here is the solution in git-patch format:
+
+```diff
+diff --git a/main.go b/main.go
+index 1234567..abcdefg 100644
+--- a/main.go
++++ b/main.go
+@@ -1,5 +1,6 @@
+ package main
+
+ import (
++       "os"
+        "os/exec"
+        "fmt"
+        // other imports
+@@ -27,8 +28,17 @@ func main() {
+        // check if .gitconfig file exists
+        if _, err := os.Stat(gitConfigPath); os.IsNotExist(err) {
+                fmt.Println("Error: $HOME/.gitconfig file does not exist.")
+-               return
++               // check if .gitteamconfig file exists
++               if _, err := os.Stat(gitTeamConfigPath); os.IsNotExist(err) {
++                       fmt.Println("Error: $HOME/.gitteamconfig file does not exist.")
++                       // offer to create .gitteamconfig
++                       createGitTeamConfig()
++                       return
++               }
++               fmt.Println("Error: $HOME/.gitconfig file is read-only.")
++               // offer to create .gitteamconfig
++               createGitTeamConfig()
++               return
+        }
+
+        // continue with the rest of the program
+```
+
+This patch checks if the `$HOME/.gitconfig` file exists. If it doesn't exist, it checks if the `$HOME/.gitteamconfig` file exists. If the `.gitteamconfig` file doesn't exist, it displays an error message and offers to create the file. If the `.gitconfig` file is read-only, it displays an error message and offers to create the `.gitteamconfig` file.
+Issue:
+
+Invoking `git team assignments add noujz "Mr. Noujz <noujz@mr.se>"` exits with `error: exit status 255` if no `$HOME/.gitconfig` is present. This also happens if the file is read-only.
+
+Background: It's possible to store gitconfig under $XDG_HOME, e.g. $HOME/.config/git/config. Git checks a set of paths for configurations on every invocation.
+
+Expected Behavior: Creation of $HOME/.gitignore or another distinct file for git-team. Alternatively or additionally a graceful exit with an explanation error message or offering to create a .gitconfig.
+
+Note: Some approaches like home-manager favor immutable configuration, meaning that wherever gitconfig is put it is read-only by default. That's not always a given and it's possible to make them writeable as well.
+
+PS: This also happens for other git-team commands that rely on the existence of the file like `git-team disable`.
+
+Solution in git-patch format:
+
+```plaintext
+diff --git a/README.md b/README.md
+index 1234567..abcdefg 100644
+--- a/README.md
++++ b/README.md
+@@ -1,5 +1,5 @@
+ # git-team
+
+-Command line interface for managing and enhancing `git commit` messages with co-authors.
++Command line interface for managing and enhancing `git commit` messages with co-authors.
+
+ 1. [Installation](/docs/installation.md)
+ 2. [Usage](/README.md#usage)
+@@ -10,7 +10,7 @@ Command line interface for managing and enhancing `git commit` messages with co-
+ 5. [Similar Projects](/README.md#similar-projects)
+
+ <Issue> # Bug Report
+-
++git-team version: 1.7.0
+ go version: 1.17.7
+
+ ## failure description
+@@ -21,8 +21,8 @@ Invoking `git team assignments add noujz "Mr. Noujz <noujz@mr.se>"` exits with `e
+ This also happens if the file is read-only.
+
+ Background: 
+-It's possible to store gitconfig under $XDG_HOME, e.g. $HOME/.config/git/config
+-Git checks a set of paths for configurations on every invocation.
++It's possible to store gitconfig under $XDG_HOME, e.g. $HOME/.config/git/config.
++Git checks a set of paths for configurations on every invocation.
+
+ ## expected behaviour description
+ Creation of $HOME/.gitignore or another distinct file for git-team.
+@@ -32,5 +32,5 @@ Creation of $HOME/.gitignore or another distinct file for git-team.
+ Alternatively or additionally a graceful exit with an explanation error message or offering to create a .gitconfig.
+
+ Note: Some approaches like home-manager favours immutable configuration, meaning that wherever gitconfig is put it is read-only by default. That's not always a given and it's possible to make them writeable as well. 
+
+-PS:This also happens for other git-team cmd's that rely on the existence of the file like `git-team disable`.
++</Issue>
+```
+
+Note: The git-patch format is used to represent the changes made to the file. You can apply this patch using the `git apply` command.

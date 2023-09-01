@@ -1,6 +1,6 @@
 import os
 from langchain.document_loaders import TextLoader
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain.vectorstores import DeepLake, Chroma
 from langchain.embeddings.openai import OpenAIEmbeddings
 
@@ -9,7 +9,7 @@ from utils.fetchRepos import getRepo
 
 #from src.utils.fetchRepos import getTestRepo,readFromExcel
 
-def indexRepo(repoURL):
+def indexRepo2(repoURL):
 
 
     os.environ['OPENAI_API_KEY'] = ""
@@ -57,7 +57,12 @@ def indexRepo(repoURL):
                     pass
 
     #chunk the files
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=50)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=750,  # Maximum size of each chunk
+        chunk_overlap=20  # Maximum overlap between chunks
+    )
+    print("splitting files recursively")
+    text_splitter2 = CharacterTextSplitter(chunk_size=1000, chunk_overlap=50)
     texts = text_splitter.split_documents(docs)
 
     #embed the files and add them to the vector db

@@ -1,5 +1,6 @@
 import os
 
+from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores import DeepLake
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
@@ -11,13 +12,19 @@ from langchainLogic.indexer import indexRepo
 def promptLangchain(repoURL, promptBody):
     print("Starting promptLangchain function...")
 
-    os.environ["OPENAI_API_KEY"] = os.environ["API_KEY"]
+    os.environ['OPENAI_API_KEY'] = ""
 
     print("Initializing embeddings...")
     embeddings = OpenAIEmbeddings(disallowed_special=())
 
     print("Indexing repository...")
-    db = DeepLake(indexRepo(repoURL), read_only=True, embedding_function=embeddings)
+    #check if repo is already indexed
+    if os.path.exists("vectordbs/"+repoURL.split("/")[-1]+"_doc"):
+        print("repo already indexed")
+        db = DeepLake(dataset_path="vectordbs/"+repoURL.split("/")[-1]+"_doc", embedding_function=embeddings)
+
+    else:
+        db = DeepLake(dataset_path=indexRepo(repoURL), embedding_function=embeddings)
 
     print("Configuring retriever...")
     retriever = db.as_retriever()
@@ -27,32 +34,38 @@ def promptLangchain(repoURL, promptBody):
     retriever.search_kwargs['lambda_mult'] = '0.7'
     retriever.search_kwargs['k'] = 35
     print("loaded retriever")
-    model = ChatOpenAI(model="gpt-3.5-turbo-0613")
-    qa = ConversationalRetrievalChain.from_llm(model,retriever=retriever) # add verbose = True to see the full convo
-
 
     print("Loading chat model...")
-    model = ChatOpenAI(model="gpt-3.5-turbo-0613")
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    model = ChatOpenAI(model="gpt-3.5-turbo-16k")
     qa = ConversationalRetrievalChain.from_llm(
-        model, retriever=retriever
+        model, retriever=retriever, memory=memory
     )  # add verbose = True to see the full convo
+
 
     print("Preparing questions...")
     questions = [
-        "Resolve the issue in the given text, which is delimited by XML tags. Print only the code for the solution. The issue is enclosed within: <Issue> "
+        "Try naming the present class names",
+        "Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
         + promptBody
-        + "</Issue>"
+        + "</Issue>",
+        "In which class should the previously generated code be placed?"
     ]
 
     print("Starting conversation retrieval...")
     chat_history = []
+
     for question in questions:
         result = qa({"question": question, "chat_history": chat_history})
         print(f"-> **Question**: {question} \n")
         print(f"**Answer**: {result['answer']} \n")
 
         print("Appending result to text file...")
-        with open("../result/result.txt", "a") as myfile:
+
+        # save result to text file with reponame
+        repo_name = repoURL.split("/")[-1]
+
+        with open("result/result_" + repo_name + ".txt", "a") as myfile:
             myfile.write(result["answer"] + "\n")
             myfile.close()
 

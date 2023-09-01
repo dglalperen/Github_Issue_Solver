@@ -6,8 +6,8 @@ from datetime import datetime
 from langchainLogic.prompt import promptLangchain
 
 # Get the value of an environment variable
-api_key = os.environ["API_KEY"]
-os.environ["OPENAI_API_KEY"] = api_key  # Make sure the proper API key is set
+os.environ["API_KEY"] = ""
+os.environ["OPENAI_API_KEY"] = ""  # Make sure the proper API key is set
 
 
 def get_issues_from_github_repo(repo_url):

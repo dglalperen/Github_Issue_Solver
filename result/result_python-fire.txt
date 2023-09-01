@@ -1,0 +1,34 @@
+The present class names are:
+- Underscores
+- BoolConverter
+- ReturnsObj
+- NumberDefaults
+- InstanceVars
+- Kwargs
+- ErrorRaiser
+The behavior of boolean arguments can be modified to support 0, 'false', and 'no' as valid inputs that cast to False by creating a custom converter function and using the `Fire.add_type_converter()` method to register the function as the converter for boolean arguments.
+
+Here's an example implementation:
+
+```python
+import fire
+
+class BoolConverter(object):
+
+  @staticmethod
+  def convert(value):
+    if value in [0, 'false', 'no']:
+      return False
+    else:
+      return bool(value)
+
+fire.Fire(BoolConverter)
+```
+
+In this example, the `BoolConverter` class defines a static method `convert()` that takes a value and returns the converted boolean value. The method checks if the value is 0, 'false', or 'no', and if so, returns False. Otherwise, it uses the built-in `bool()` function to convert the value to a boolean.
+
+The `fire.Fire(BoolConverter)` line registers `BoolConverter` as the converter for boolean arguments. This means that when you use `fire.Fire()` to run a function that has boolean arguments, the `convert()` method of `BoolConverter` will be called to convert the input values to boolean.
+
+With this modification, you can use 0, 'false', and 'no' as valid inputs for boolean arguments that will cast to False.
+
+The previously generated code should be placed in the `FireTrace` class.
