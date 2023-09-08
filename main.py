@@ -1,68 +1,29 @@
-import requests
-import json
 import os
 from datetime import datetime
-
+from handlers.IssueHandler import IssueHandler
 from langchainLogic.prompt import promptLangchain
+from dotenv import load_dotenv
+from services.GitHubAPI import GithubAPI
+from utils.github_actions import fork_repo, create_pull_request
+load_dotenv()
 
+
+# ERSETZE DURCH .env file
 # Get the value of an environment variable
-os.environ["API_KEY"] = ""
-os.environ["OPENAI_API_KEY"] = ""  # Make sure the proper API key is set
+GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-
-def get_issues_from_github_repo(repo_url):
-    repo_path = repo_url.replace("https://github.com/", "")
-    api_url = f"https://api.github.com/repos/{repo_path}/issues"
-    headers = {"Accept": "application/vnd.github+json"}
-
-    all_issues = []
-    page = 1
-
-    while True:
-        params = {"page": page, "per_page": 100, "state": "open"}
-        response = requests.get(api_url, headers=headers, params=params)
-
-        if response.status_code == 200:
-            issues = json.loads(response.text)
-            if not issues:  # If no more issues, break the loop
-                break
-
-            all_issues.extend(issues)
-            page += 1
-        else:
-            print(f"Error: {response.status_code}")
-            return None
-
-    return all_issues
-
-
-def ask_chatgpt(prompt, context=None):
-    messages = [
-        {
-            "role": "system",
-            "content": "You are an AI language model specializing in software development, with a focus on assisting users in resolving their GitHub issues. Utilizing your expertise in coding best practices and software design patterns, your task is to analyze problems, suggest solutions, and guide users in implementing fixes for their GitHub-related challenges.",
-        }
-    ]
-
-    if context:
-        messages.append({"role": "user", "content": context})
-
-    messages.append({"role": "user", "content": prompt})
-
-    response = openai.ChatCompletion.create(model="gpt-4", messages=messages)
-
-    message = response["choices"][0]["message"]["content"]
-    return message
 
 
 def save_response_to_file(issue_number, response):
-    date_str = datetime.now().strftime("%Y-%m-%d-%h-%m")
-    file_name = f"Issue_{issue_number}_{date_str}.txt"
-
-    with open(file_name, "w") as file:
-        file.write(response)
-
-    print(f"\nResponse saved to: {file_name}\n")
+    try:
+        date_str = datetime.now().strftime("%Y-%m-%d-%h-%m")
+        file_name = f"Issue_{issue_number}_{date_str}.txt"
+        with open(file_name, "w") as file:
+            file.write(response)
+        print(f"\nResponse saved to: {file_name}\n")
+    except Exception as e:
+        print(f"Failed to save the response to file: {e}")
 
 
 def display_issue(issue):
@@ -74,57 +35,66 @@ def display_issue(issue):
     print(f'URL: {issue["html_url"]}')
     print(f'\n{issue["body"]}\n')
 
-def get_issue_body(issue):
-    print(f'\n{issue["body"]}\n')
-    return issue["body"]
 
 if __name__ == "__main__":
-    print("Starting the main script...")
+    try:
+        print("Starting the main script...")
+        
+        GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        if not GITHUB_API_KEY or not OPENAI_API_KEY:
+            print("API keys not set. Exiting.")
+            exit(1)
+        
+        repo_url = input("Please enter the GitHub repository URL: ")
+        if not repo_url:
+            print("Repository URL not provided. Exiting.")
+            exit(1)
 
-    repo_url = input("Please enter the GitHub repository URL: ")
-    print(f"Fetching issues from {repo_url}...")
-    issues = get_issues_from_github_repo(repo_url)
+        github_api = GithubAPI()
 
-    if issues:
+        print(f"Fetching issues from {repo_url}...")
+        issues = github_api.get_issues(repo_url)
+        if not issues:
+            print("No issues found or an error occurred. Exiting.")
+            exit(1)
+
         print(f"Found {len(issues)} issues.")
-        for issue in issues:
-            print(f'#{issue["number"]}: {issue["title"]}')
 
-        while True:
-            selected_issue_number_input = input(
-                "\nEnter the issue number you want to view (0 to exit): "
-            )
-            try:
-                selected_issue_number = int(selected_issue_number_input)
-                if selected_issue_number == 0:
-                    break
+        issue_handler = IssueHandler(issues)
+        issue_handler.display_issues()
 
-                selected_issue = next(
-                    (
-                        issue
-                        for issue in issues
-                        if issue["number"] == selected_issue_number
-                    ),
-                    None,
-                )
-                if selected_issue:
-                    display_issue(selected_issue)
-                    issue_body = selected_issue["body"]
-                    try:
-                        promptLangchain(
-                            repo_url, issue_body
-                        )  # Process the selected issue
-                    except ValueError as ve:
-                        print(f"ValueError in promptLangchain function: {ve}")
-                        continue
-                    print(
-                        "Issue processed and result saved in '../result/result.txt' file."
-                    )
+    except Exception as e:
+        print(f"Initialization or API call failed: {e}")
+        exit(1)
+
+    while True:
+        try:
+            selected_issue = issue_handler.select_issue()
+
+            if selected_issue:
+                display_issue(selected_issue)
+                issue_body = selected_issue["body"]
+                
+                try:
+                    promptLangchain(repo_url, issue_body)  # Process the selected issue
+                except ValueError as ve:
+                    print(f"ValueError in promptLangchain function: {ve}")
+                    continue
+
+                print("Issue processed and result saved in '../result/result.txt' file.")
+            
+                # Fork the repo here if user agrees
+                user_decision = input("Do you want to fork the repository? (y/n): ")
+                if user_decision.lower() == 'y':
+                    fork_repo(GITHUB_API_KEY, repo_url)
                 else:
-                    print("Invalid issue number.")
-            except ValueError:
-                print(
-                    f"Invalid input: {selected_issue_number_input}. Please enter a valid issue number."
-                )
-    else:
-        print("No issues found or an error occurred.")
+                    print("Skipping forking.")
+
+            else:
+                print("No selected issue or exiting.")
+                break
+
+        except Exception as e:
+            print(f"An error occurred while processing the issue: {e}")
+
