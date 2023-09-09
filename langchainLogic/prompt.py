@@ -1,5 +1,6 @@
 import os
 
+from dotenv import load_dotenv
 from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores import DeepLake
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -11,8 +12,9 @@ from langchainLogic.indexer import indexRepo
 
 def promptLangchain(repoURL, promptBody):
     print("Starting promptLangchain function...")
+    load_dotenv()
 
-    os.environ['OPENAI_API_KEY'] = ""
+    os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
 
     print("Initializing embeddings...")
     embeddings = OpenAIEmbeddings(disallowed_special=())
@@ -37,7 +39,7 @@ def promptLangchain(repoURL, promptBody):
 
     print("Loading chat model...")
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-    model = ChatOpenAI(model="gpt-3.5-turbo-16k")
+    model = ChatOpenAI(model="gpt-4")
     qa = ConversationalRetrievalChain.from_llm(
         model, retriever=retriever, memory=memory
     )  # add verbose = True to see the full convo

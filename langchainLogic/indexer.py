@@ -1,4 +1,6 @@
 import os
+
+from dotenv import load_dotenv
 from langchain.document_loaders import TextLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import DeepLake, Chroma
@@ -10,9 +12,9 @@ from utils.fetchRepos import getRepo
 #from src.utils.fetchRepos import getTestRepo,readFromExcel
 
 def indexRepo(repoURL):
+    load_dotenv()
 
-
-    os.environ['OPENAI_API_KEY'] = ""
+    os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
 
     #Set to true if you want to include documentation files
     documentation = True
@@ -53,11 +55,13 @@ def indexRepo(repoURL):
                 try:
                     loader = TextLoader(os.path.join(dirpath, file), encoding='utf-8')
                     docs.extend(loader.load_and_split())
+                    for doc in docs:
+                        doc.metadata['file_name'] = file
                 except Exception as e:
                     pass
 
     #chunk the files
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=50)
+    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=20)
     texts = text_splitter.split_documents(docs)
 
     #embed the files and add them to the vector db
