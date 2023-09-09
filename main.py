@@ -4,7 +4,7 @@ from handlers.IssueHandler import IssueHandler
 from langchainLogic.prompt import promptLangchain
 from dotenv import load_dotenv
 from services.GitHubAPI import GithubAPI
-from utils.extractFileFromURL import extractFilesFromURL
+from utils.extractFileFromURL import extractFilesFromURL, replaceURLsWithFilenames
 from utils.github_actions import fork_repo, create_pull_request
 
 load_dotenv()
@@ -74,8 +74,9 @@ if __name__ == "__main__":
 
             if selected_issue:
                 potentially_relevant_files = extractFilesFromURL(selected_issue)
+                issue_body = replaceURLsWithFilenames(selected_issue) # pass the full issue
                 display_issue(selected_issue)
-                issue_body = selected_issue["body"]
+
 
                 try:
                     promptLangchain(repo_url, issue_body)  # Process the selected issue
