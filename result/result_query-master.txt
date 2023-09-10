@@ -1,0 +1,37 @@
+The file 'useDataTableContextMenu.tsx' appears to define a custom hook in React for creating a context menu in a data table. It takes parameters such as data, cellManager, collector, newRowCount, and selectedRowsIndex, which are likely related to the state and behavior of the data table. The context menu could provide functionalities such as copy, paste, delete, or any custom behavior on the data table.
+
+The file 'TransformResult.ts' is not directly mentioned in the provided context. However, based on typical naming conventions, it likely contains functions or methods to transform or manipulate results, possibly from a database query or an API call. The exact purpose would depend on the functions defined within this file.
+The file 'useDataTableContextMenu.tsx' appears to be a custom React hook for managing the context menu within a data table component. It seems to be used to provide actions such as renaming, adding new items, and removing items. It takes dependencies such as a ResultChangeCollector, TableCellManager, selectedRowsIndex, newRowCount, and data. The context menu actions might differ based on the selected cells in the data table.
+
+The file 'TransformResult.ts' is not directly mentioned in the provided context. However, based on its usage in the other mentioned files, it appears to be a utility file for transforming database query results. The function 'transformResultHeaderUseSchema' suggests that it might be used to transform result headers using a provided schema. Other functions like 'getDisplayableFromDatabaseRows' suggest that it might also be used to transform database rows into a more user-friendly format.
+Here's a way to implement this feature. The function `onCopyAsMarkdown` converts the selected rows to a string in Markdown table format and writes the string to the clipboard. The function is then added to the context menu, similarly to the existing "Copy as JSON" feature.
+
+```javascript
+// Add this function in your context menu file (useDataTableContextMenu.tsx)
+function onCopyAsMarkdown() {
+  const markdownRows = selectedRowsIndex.map((rowIndex) => {
+    const row = data[rowIndex].data;
+    return Object.values(getDisplayableFromDatabaseRows([row])[0]).join(' | ');
+  });
+  const headersString = Object.keys(data[0].data).join(' | ');
+  const separator = new Array(Object.keys(data[0].data).length).fill('---').join(' | ');
+  const markdownTable = [headersString, separator, ...markdownRows].join('\n');
+  window.navigator.clipboard.writeText(markdownTable);
+}
+
+// Add the new function to the context menu
+{
+  text: 'Copy Selected Rows As',
+  disabled: !selectedCell,
+  children: [
+    { text: 'As Excel', disabled: true },
+    { text: 'As CSV', disabled: true },
+    { text: 'As JSON', onClick: onCopyAsJson },
+    { text: 'As Markdown', onClick: onCopyAsMarkdown },   // Add this line
+    { text: 'As SQL', disabled: true },
+  ],
+}
+```
+
+You may need to adjust the implementation based on the specifics of your context and data structure. Make sure to handle possible exceptions or edge cases, for instance, if the `data` array might be empty.
+The previously generated code should be placed in the 'lastMapping' variable. This happens in the 'aSourceMapConsumer.eachMapping' function, where the generated code is associated with the previous mapping. If there is a new line, the code from 'lastMapping' to the new mapping is added. If there is no new line, the code between 'lastGeneratedColumn' and 'mapping.generatedColumn' is associated with 'lastMapping'.

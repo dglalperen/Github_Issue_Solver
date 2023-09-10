@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
 
                 try:
-                    promptLangchain(repo_url, issue_body)  # Process the selected issue
+                    promptLangchain(repo_url, issue_body,potentially_relevant_files)  # Process the selected issue
                 except ValueError as ve:
                     print(f"ValueError in promptLangchain function: {ve}")
                     continue

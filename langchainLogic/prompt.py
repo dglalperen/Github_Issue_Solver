@@ -10,7 +10,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchainLogic.indexer import indexRepo
 
 
-def promptLangchain(repoURL, promptBody):
+def promptLangchain(repoURL, promptBody, relevantFiles = []):
     print("Starting promptLangchain function...")
     load_dotenv()
 
@@ -26,7 +26,8 @@ def promptLangchain(repoURL, promptBody):
         db = DeepLake(dataset_path="vectordbs/"+repoURL.split("/")[-1]+"_doc", embedding_function=embeddings)
 
     else:
-        db = DeepLake(dataset_path=indexRepo(repoURL), embedding_function=embeddings)
+        print("repo not indexed yet")
+        #db = DeepLake(dataset_path=indexRepo(repoURL), embedding_function=embeddings)
 
     print("Configuring retriever...")
     retriever = db.as_retriever()
@@ -34,7 +35,7 @@ def promptLangchain(repoURL, promptBody):
     retriever.search_kwargs['fetch_k'] = 100
     retriever.search_kwargs['search_type'] = 'mmr'
     retriever.search_kwargs['lambda_mult'] = '0.7'
-    retriever.search_kwargs['k'] = 35
+    retriever.search_kwargs['k'] = 25
     print("loaded retriever")
 
     print("Loading chat model...")
@@ -43,20 +44,21 @@ def promptLangchain(repoURL, promptBody):
     qa = ConversationalRetrievalChain.from_llm(
         model, retriever=retriever, memory=memory
     )  # add verbose = True to see the full convo
-
+    questions = []
+    if len(relevantFiles) > 0:
+        questions.append("What are the files"+str(relevantFiles)+" about?")
 
     print("Preparing questions...")
-    questions = [
-        "Try naming the present class names",
+    base_questions = [
         "Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
         + promptBody
         + "</Issue>",
         "In which class should the previously generated code be placed?"
     ]
-
+    questions.extend(base_questions)
     print("Starting conversation retrieval...")
     chat_history = []
-
+    file_names = []
     for question in questions:
         result = qa({"question": question, "chat_history": chat_history})
         print(f"-> **Question**: {question} \n")
