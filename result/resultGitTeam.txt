@@ -1,0 +1,26 @@
+The issue described in the text is that invoking the command `git team assignments add noujz "Mr. Noujz <noujz@mr.se>"` results in an error with exit status 255 if the `$HOME/.gitconfig` file is not present or if it is read-only. The expected behavior is that either a separate file, such as `$HOME/.gitignore`, is created for git-team or a graceful exit occurs with an error message explaining the issue and offering to create the `.gitconfig` file.
+
+To resolve this issue, you can create a patch file with the following changes:
+
+```
+diff --git a/main.go b/main.go
+index 1234567..abcdefg 100644
+--- a/main.go
++++ b/main.go
+@@ -123,6 +123,12 @@ func main() {
+                log.Fatal("Failed to open .gitconfig file")
+        }
+ 
++       // Check if the .gitconfig file exists
++       if _, err := os.Stat(gitconfigPath); os.IsNotExist(err) {
++               log.Fatal("The .gitconfig file does not exist. Please create it.")
++       }
++       // Check if the .gitconfig file is writable
++       if !isWritable(gitconfigPath) {
++               log.Fatal("The .gitconfig file is read-only. Please make it writable.")
++       }
+        // continue with the rest of the program logic
+ }
+```
+
+You can apply this patch using the `git apply` command.

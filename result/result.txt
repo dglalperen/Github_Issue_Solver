@@ -1,0 +1,50 @@
+```diff
+diff --git a/address.py b/address.py
+index 2c15a24..f1b4b5e 100644
+--- a/address.py
++++ b/address.py
+@@ -432,7 +432,7 @@ class Address(object):
+         if len(self.privateKey) < 10:
+             msg = 'Private key required'
+             logging.error(msg)
+-            self.pywaves.throw_error(msg)
++            raise ValueError(msg)
+         elif not self.pywaves.OFFLINE and asset and not asset.status():
+             msg = 'Asset not issued'
+             logging.error(msg)
+@@ -551,7 +551,7 @@ class Address(object):
+         if len(self.privateKey) < 10:
+             msg = 'Private key required'
+             logging.error(msg)
+-            self.pywaves.throw_error(msg)
++            raise ValueError(msg)
+         elif not self.pywaves.OFFLINE and asset and not asset.status():
+             msg = 'Asset not issued'
+             logging.error(msg)
+```
+```git-patch
+diff --git a/README.md b/README.md
+index 1234567..abcdefg 100644
+--- a/README.md
++++ b/README.md
+@@ -1,5 +1,9 @@
+ # Bug Report
+
++## Solution
++The issue occurs when switching from repo-local mode to global mode in git-team. The repo local state is still present in the repository's `./git` directory, causing the global state to be ignored during commits. To resolve this, git-team should prioritize the config based on the currently used activation-scope. If the activation-scope is global, any repo local state should be removed to prevent interference.
+
+ git-team version: 1.7.0
+ go version: 1.17.7
+
+@@ -8,6 +12,10 @@ After using git-team in a repo-local mode via `git team config activation-scope r
+ git-team status will return the global status, but during a commit the repo local state is getting picked up and the global state is ignored.
+
+ ## expected behaviour description
++I would expect that git-team prioritises the config in alignment with the currently used activation-scope.
++If this is global, I'd also hope that it would remove any repo local state that could interfere.
++
++## Solution
+ I would expect that git-team prioritises the config in alignment with the currently used activation-scope.
+ If this is global, I'd also hope that it would remove any repo local state that could interfere.
+```
+</code></pre>

@@ -1,65 +1,29 @@
-import requests
-import json
-import openai
 import os
 from datetime import datetime
+from handlers.IssueHandler import IssueHandler
+from langchainLogic.prompt import promptLangchain
+from dotenv import load_dotenv
+from services.GitHubAPI import GithubAPI
+from utils.extractFileFromURL import extractFilesFromURL, replaceURLsWithFilenames
+from utils.github_actions import fork_repo, create_pull_request
 
+load_dotenv()
+
+# ERSETZE DURCH .env file
 # Get the value of an environment variable
-api_key = os.environ['API_KEY']
-openai.api_key = api_key
-
-def get_issues_from_github_repo(repo_url):
-    repo_path = repo_url.replace('https://github.com/', '')
-    api_url = f'https://api.github.com/repos/{repo_path}/issues'
-    headers = {'Accept': 'application/vnd.github+json'}
-
-    all_issues = []
-    page = 1
-
-    while True:
-        params = {'page': page, 'per_page': 100, 'state': 'open'}
-        response = requests.get(api_url, headers=headers, params=params)
-
-        if response.status_code == 200:
-            issues = json.loads(response.text)
-            if not issues:  # If no more issues, break the loop
-                break
-
-            all_issues.extend(issues)
-            page += 1
-        else:
-            print(f'Error: {response.status_code}')
-            return None
-
-    return all_issues
-
-
-def ask_chatgpt(prompt, context=None):
-    messages = [{"role": "system",
-                 "content": "You are an AI language model, and your task is to help users with their GitHub issues."}]
-
-    if context:
-        messages.append({"role": "user", "content": context})
-
-    messages.append({"role": "user", "content": prompt})
-
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages
-    )
-
-    message = response['choices'][0]['message']['content']
-    return message
+GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 def save_response_to_file(issue_number, response):
-    date_str = datetime.now().strftime("%Y-%m-%d-%h-%m")
-    file_name = f'Issue_{issue_number}_{date_str}.txt'
-
-    with open(file_name, 'w') as file:
-        file.write(response)
-
-    print(f'\nResponse saved to: {file_name}\n')
+    try:
+        date_str = datetime.now().strftime("%Y-%m-%d-%h-%m")
+        file_name = f"Issue_{issue_number}_{date_str}.txt"
+        with open(file_name, "w") as file:
+            file.write(response)
+        print(f"\nResponse saved to: {file_name}\n")
+    except Exception as e:
+        print(f"Failed to save the response to file: {e}")
 
 
 def display_issue(issue):
@@ -72,35 +36,66 @@ def display_issue(issue):
     print(f'\n{issue["body"]}\n')
 
 
-if __name__ == '__main__':
-    repo_url = input("Please enter the GitHub repository URL: ")
-    issues = get_issues_from_github_repo(repo_url)
+if __name__ == "__main__":
+    try:
+        print("Starting the main script...")
 
-    if issues:
-        for issue in issues:
-            print(f'#{issue["number"]}: {issue["title"]}')
+        GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        if not GITHUB_API_KEY or not OPENAI_API_KEY:
+            print("API keys not set. Exiting.")
+            exit(1)
 
-        while True:
-            try:
-                selected_issue_number = int(input("\nEnter the issue number you want to view (0 to exit): "))
-                if selected_issue_number == 0:
-                    break
+        repo_url = input("Please enter the GitHub repository URL: ")
+        if not repo_url:
+            print("Repository URL not provided. Exiting.")
+            exit(1)
 
-                selected_issue = next((issue for issue in issues if issue['number'] == selected_issue_number), None)
-                if selected_issue:
-                    display_issue(selected_issue)
+        github_api = GithubAPI()
 
-                    context = f'The GitHub repository URL is "{repo_url}".'
-                    prompt = f'Please help me understand the following GitHub issue and suggest a possible solution: "{selected_issue["title"]}". The issue description is: "{selected_issue["body"]}".'
+        print(f"Fetching issues from {repo_url}...")
+        issues = github_api.get_issues(repo_url)
+        if not issues:
+            print("No issues found or an error occurred. Exiting.")
+            exit(1)
 
-                    response = ask_chatgpt(prompt, context)
-                    print(f'\nChatGPT response: {response}\n')
+        print(f"Found {len(issues)} issues.")
 
-                    save_response_to_file(selected_issue["number"], response)
+        issue_handler = IssueHandler(issues)
+        issue_handler.display_issues()
+
+    except Exception as e:
+        print(f"Initialization or API call failed: {e}")
+        exit(1)
+
+    while True:
+        try:
+            selected_issue = issue_handler.select_issue()
+
+            if selected_issue:
+                potentially_relevant_files = extractFilesFromURL(selected_issue)
+                issue_body = replaceURLsWithFilenames(selected_issue) # pass the full issue
+                display_issue(selected_issue)
+
+
+                try:
+                    promptLangchain(repo_url, issue_body,potentially_relevant_files)  # Process the selected issue
+                except ValueError as ve:
+                    print(f"ValueError in promptLangchain function: {ve}")
+                    continue
+
+                print("Issue processed and result saved in '../result/result.txt' file.")
+
+                # Fork the repo here if user agrees
+                user_decision = input("Do you want to fork the repository? (y/n): ")
+                if user_decision.lower() == 'y':
+                    fork_repo(GITHUB_API_KEY, repo_url)
                 else:
-                    print('Invalid issue number.')
+                    print("Skipping forking.")
 
-            except ValueError:
-                print('Invalid input. Please enter a valid issue number.')
-    else:
-        print('No issues found or an error occurred.')
+            else:
+                print("No selected issue or exiting.")
+                break
+
+        except Exception as e:
+            print(f"An error occurred while processing the issue: {e}")
