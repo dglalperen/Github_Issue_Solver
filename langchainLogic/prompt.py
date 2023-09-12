@@ -10,7 +10,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchainLogic.indexer import indexRepo
 
 
-def promptLangchain(repoURL, promptBody, relevantFiles = []):
+def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
     print("Starting promptLangchain function...")
     load_dotenv()
 
@@ -27,7 +27,7 @@ def promptLangchain(repoURL, promptBody, relevantFiles = []):
 
     else:
         print("repo not indexed yet")
-        #db = DeepLake(dataset_path=indexRepo(repoURL), embedding_function=embeddings)
+        db = DeepLake(dataset_path=indexRepo(repoURL), embedding_function=embeddings)
 
     print("Configuring retriever...")
     retriever = db.as_retriever()
@@ -50,9 +50,10 @@ def promptLangchain(repoURL, promptBody, relevantFiles = []):
 
     print("Preparing questions...")
     base_questions = [
-        "Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
-        + promptBody
-        + "</Issue>",
+        f"""Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
+        {promptBody}
+        </Issue>
+        Relevant information for the following questions is provided in the tags: {tags}""",
         "In which class should the previously generated code be placed?"
     ]
     questions.extend(base_questions)

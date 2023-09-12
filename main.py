@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 from handlers.IssueHandler import IssueHandler
 from langchainLogic.prompt import promptLangchain
@@ -60,13 +61,18 @@ if __name__ == "__main__":
             exit(1)
 
         print(f"Found {len(issues)} issues.")
-
         issue_handler = IssueHandler(issues)
         issue_handler.display_issues()
 
     except Exception as e:
         print(f"Initialization or API call failed: {e}")
         exit(1)
+
+    # Get tags from user
+    tags = input("Please enter the tags for the issue, seperated with ',': ")
+    tags_list = [tag.strip() for tag in tags.split(",")]
+    print(tags_list)
+
 
     while True:
         try:
@@ -79,7 +85,7 @@ if __name__ == "__main__":
 
 
                 try:
-                    promptLangchain(repo_url, issue_body,potentially_relevant_files)  # Process the selected issue
+                    promptLangchain(repo_url, issue_body, tags_list, potentially_relevant_files)  # Process the selected issue
                 except ValueError as ve:
                     print(f"ValueError in promptLangchain function: {ve}")
                     continue
@@ -100,5 +106,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"An error occurred while processing the issue: {e}")
 
-
-# test push
