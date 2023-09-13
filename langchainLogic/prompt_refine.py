@@ -8,10 +8,9 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 
 from langchainLogic.indexer import indexRepo
-from langchainLogic.prompt_refine import promptRefineLangchain
 
 
-def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
+def promptRefineLangchain(repoURL, relevantFiles = [], tags = []):
     print("Starting promptLangchain function...")
     load_dotenv()
 
@@ -19,16 +18,7 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
 
     print("Initializing embeddings...")
     embeddings = OpenAIEmbeddings(disallowed_special=())
-
-    print("Indexing repository...")
-    #check if repo is already indexed
-    if os.path.exists("vectordbs/"+repoURL.split("/")[-1]+"_doc"):
-        print("repo already indexed")
-        db = DeepLake(dataset_path="vectordbs/"+repoURL.split("/")[-1]+"_doc", embedding_function=embeddings)
-
-    else:
-        print("repo not indexed yet")
-        db = DeepLake(dataset_path=indexRepo(repoURL), embedding_function=embeddings)
+    db = DeepLake(dataset_path="vectordbs/"+repoURL.split("/")[-1]+"_doc", embedding_function=embeddings)
 
     print("Configuring retriever...")
     retriever = db.as_retriever()
@@ -39,25 +29,35 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
     retriever.search_kwargs['k'] = 25
     print("loaded retriever")
 
+    #open result file of the repo
+    with open("result/result_" + repoURL.split("/")[-1] + ".txt", "r") as myfile:
+        result = myfile.read()
+        myfile.close()
+
     print("Loading chat model...")
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     model = ChatOpenAI(model="gpt-4")
+
+    #read code.txt file
+    with open("code.txt", "r") as myfile:
+        code = myfile.read()
+        myfile.close()
+
+
+
+
     qa = ConversationalRetrievalChain.from_llm(
         model, retriever=retriever, memory=memory
     )  # add verbose = True to see the full convo
     questions = []
-    if len(relevantFiles) > 0:
-        questions.append("What are the files"+str(relevantFiles)+" about?")
-
     if len(tags) > 0:
-        questions.append("What are the tags "+str(tags)+" about?")
+        questions.append("Consider "+str(tags)+" as tags for relevant information")
+    if len(relevantFiles) > 0:
+        questions.append("Consider "+str(relevantFiles)+" as relevant files")
 
     print("Preparing questions...")
     base_questions = [
-        f"""Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
-        {promptBody}
-        </Issue>""",
-        "In which class should the previously generated code be placed?"
+        "optimize the given code the best way you are able to, which is delimited by the XML tags. <Code>"+code+"</Code>",
     ]
     questions.extend(base_questions)
     print("Starting conversation retrieval...")
@@ -73,10 +73,8 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
         # save result to text file with reponame
         repo_name = repoURL.split("/")[-1]
 
-        with open("result/result_" + repo_name + ".txt", "a") as myfile:
+        with open("result/result_" + repo_name + "_refined.txt", "a") as myfile:
             myfile.write(result["answer"] + "\n")
             myfile.close()
 
     print("promptLangchain function completed.")
-    print("initiating promptRefineLangchain function...")
-    promptRefineLangchain(repoURL, relevantFiles)

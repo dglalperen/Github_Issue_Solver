@@ -1,0 +1,23 @@
+```javascript
+function onCopyAsMarkdown() {
+  const markdownRows = selectedRowsIndex.map((rowIndex) => {
+    const row = data[rowIndex].data;
+    return Object.values(getDisplayableFromDatabaseRows([row], headers)).join(" | ");
+  });
+
+  const header = Object.keys(data[0].data).join(" | ");
+  const divider = new Array(Object.keys(data[0].data).length).fill("---").join(" | ");
+
+  const markdownTable = [header, divider, ...markdownRows].join("\n");
+
+  window.navigator.clipboard.writeText(markdownTable);
+}
+```
+
+```javascript
+{
+  text: 'Copy as Markdown',
+  onClick: onCopyAsMarkdown,
+  separator: true,
+}
+```

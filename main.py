@@ -4,6 +4,8 @@ from datetime import datetime
 from handlers.IssueHandler import IssueHandler
 from langchainLogic.prompt import promptLangchain
 from dotenv import load_dotenv
+
+from langchainLogic.prompt_refine import promptRefineLangchain
 from services.GitHubAPI import GithubAPI
 from utils.extractFileFromURL import extractFilesFromURL, replaceURLsWithFilenames
 from utils.github_actions import fork_repo, create_pull_request
@@ -91,6 +93,12 @@ if __name__ == "__main__":
                     continue
 
                 print("Issue processed and result saved in '../result/result.txt' file.")
+
+                user_decision_refine = input("Do you want to refine the code? (y/n): ")
+                if user_decision_refine.lower() == 'y':
+                    promptRefineLangchain(repo_url, potentially_relevant_files, tags_list)
+                else:
+                    print("Skipping forking.")
 
                 # Fork the repo here if user agrees
                 user_decision = input("Do you want to fork the repository? (y/n): ")
