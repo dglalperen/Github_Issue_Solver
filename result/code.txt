@@ -1,4 +1,5 @@
 ```javascript
+// Add this function in your context menu file (useDataTableContextMenu.tsx)
 function onCopyAsMarkdown() {
   const markdownRows = selectedRowsIndex.map((rowIndex) => {
     const row = data[rowIndex].data;

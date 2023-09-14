@@ -26,20 +26,20 @@ def promptRefineLangchain(repoURL, relevantFiles = [], tags = []):
     retriever.search_kwargs['fetch_k'] = 100
     retriever.search_kwargs['search_type'] = 'mmr'
     retriever.search_kwargs['lambda_mult'] = '0.7'
-    retriever.search_kwargs['k'] = 25
+    retriever.search_kwargs['k'] = 20
     print("loaded retriever")
 
     #open result file of the repo
-    with open("result/result_" + repoURL.split("/")[-1] + ".txt", "r") as myfile:
-        result = myfile.read()
-        myfile.close()
+    #with open("result/result_" + repoURL.split("/")[-1] + ".txt", "r") as myfile:
+    #    result = myfile.read()
+    #    myfile.close()
 
     print("Loading chat model...")
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     model = ChatOpenAI(model="gpt-4")
 
     #read code.txt file
-    with open("code.txt", "r") as myfile:
+    with open("result/code.txt", "r") as myfile:
         code = myfile.read()
         myfile.close()
 
@@ -50,10 +50,10 @@ def promptRefineLangchain(repoURL, relevantFiles = [], tags = []):
         model, retriever=retriever, memory=memory
     )  # add verbose = True to see the full convo
     questions = []
-    if len(tags) > 0:
-        questions.append("Consider "+str(tags)+" as tags for relevant information")
+   # if len(tags) > 0:
+   #     questions.append("Consider "+str(tags)+" as tags for relevant information")
     if len(relevantFiles) > 0:
-        questions.append("Consider "+str(relevantFiles)+" as relevant files")
+        questions.append("Summarize the files "+str(relevantFiles)+" very shortly.")
 
     print("Preparing questions...")
     base_questions = [
@@ -73,7 +73,7 @@ def promptRefineLangchain(repoURL, relevantFiles = [], tags = []):
         # save result to text file with reponame
         repo_name = repoURL.split("/")[-1]
 
-        with open("result/result_" + repo_name + "_refined.txt", "a") as myfile:
+        with open("result/result_" + repo_name + "_refined1.txt", "a") as myfile:
             myfile.write(result["answer"] + "\n")
             myfile.close()
 
