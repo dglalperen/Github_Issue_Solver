@@ -70,10 +70,7 @@ if __name__ == "__main__":
         print(f"Initialization or API call failed: {e}")
         exit(1)
 
-    # Get tags from user
-    tags = input("Please enter the tags for the issue, seperated with ',': ")
-    tags_list = [tag.strip() for tag in tags.split(",")]
-    print(tags_list)
+
 
 
     while True:
@@ -81,13 +78,20 @@ if __name__ == "__main__":
             selected_issue = issue_handler.select_issue()
 
             if selected_issue:
+
+                # Get tags from user
+                tags = input("Please enter the tags for the issue, seperated with ',': ")
+                tags_list = [tag.strip() for tag in tags.split(",")]
+                print(tags_list)
+
                 potentially_relevant_files = extractFilesFromURL(selected_issue)
                 issue_body = replaceURLsWithFilenames(selected_issue) # pass the full issue
                 display_issue(selected_issue)
 
 
                 try:
-                    promptLangchain(repo_url, issue_body, tags_list, potentially_relevant_files)  # Process the selected issue
+                    print("skipping promptLangchain function")
+                    #promptLangchain(repo_url, issue_body, tags_list, potentially_relevant_files)  # Process the selected issue
                 except ValueError as ve:
                     print(f"ValueError in promptLangchain function: {ve}")
                     continue
