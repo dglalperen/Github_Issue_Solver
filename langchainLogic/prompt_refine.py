@@ -30,9 +30,9 @@ def promptRefineLangchain(repoURL, relevantFiles = [], tags = []):
     print("loaded retriever")
 
     #open result file of the repo
-    #with open("result/result_" + repoURL.split("/")[-1] + ".txt", "r") as myfile:
-    #    result = myfile.read()
-    #    myfile.close()
+    with open("result/result_" + repoURL.split("/")[-1] + ".txt", "r") as myfile:
+        result = myfile.read()
+        myfile.close()
 
     print("Loading chat model...")
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
@@ -43,30 +43,24 @@ def promptRefineLangchain(repoURL, relevantFiles = [], tags = []):
         code = myfile.read()
         myfile.close()
 
-
+    text = input("Please enter what you want different in your code: ")
 
 
     qa = ConversationalRetrievalChain.from_llm(
-        model, retriever=retriever, memory=memory
+        model, retriever=retriever, memory=memory, verbose=True
     )  # add verbose = True to see the full convo
     questions = []
-   # if len(tags) > 0:
-   #     questions.append("Consider "+str(tags)+" as tags for relevant information")
-    if len(relevantFiles) > 0:
-        questions.append("Summarize the files "+str(relevantFiles)+" very shortly.")
-
-    print("Preparing questions...")
     base_questions = [
-        "optimize the given code the best way you are able to, which is delimited by the XML tags. <Code>"+code+"</Code>",
+        text+" (code is contained within the text)"+result,
     ]
     questions.extend(base_questions)
     print("Starting conversation retrieval...")
     chat_history = []
     file_names = []
     for question in questions:
-        result = qa({"question": question, "chat_history": chat_history})
+        result2 = qa({"question": question, "chat_history": chat_history})
         print(f"-> **Question**: {question} \n")
-        print(f"**Answer**: {result['answer']} \n")
+        print(f"**Answer**: {result2['answer']} \n")
 
         print("Appending result to text file...")
 
@@ -74,7 +68,7 @@ def promptRefineLangchain(repoURL, relevantFiles = [], tags = []):
         repo_name = repoURL.split("/")[-1]
 
         with open("result/result_" + repo_name + "_refined1.txt", "a") as myfile:
-            myfile.write(result["answer"] + "\n")
+            myfile.write(result2["answer"] + "\n")
             myfile.close()
 
     print("promptLangchain function completed.")

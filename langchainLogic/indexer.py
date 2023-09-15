@@ -48,7 +48,7 @@ def indexRepo(repoURL):
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for file in filenames:
             #ignore node_modules and package-lock.json
-            if "node_modules" in dirpath or "package-lock.json" in file:
+            if "node_modules" in dirpath or "temp" in dirpath or "package-lock.json" in file:
                 continue
             #ignore files that are not of the specified file extensions
             if file.endswith(tuple(fileextensions)):

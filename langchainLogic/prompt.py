@@ -11,7 +11,7 @@ from langchainLogic.indexer import indexRepo
 from langchainLogic.prompt_refine import promptRefineLangchain
 
 
-def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
+def promptLangchain(repoURL, promptBody, tags = [], relevantFiles = []):
     print("Starting promptLangchain function...")
     load_dotenv()
 
@@ -36,7 +36,7 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
     retriever.search_kwargs['fetch_k'] = 100
     retriever.search_kwargs['search_type'] = 'mmr'
     retriever.search_kwargs['lambda_mult'] = '0.7'
-    retriever.search_kwargs['k'] = 25
+    retriever.search_kwargs['k'] = 15
     print("loaded retriever")
 
     print("Loading chat model...")
@@ -49,14 +49,14 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
     if len(relevantFiles) > 0:
         questions.append("What are the files"+str(relevantFiles)+" about?")
 
-    if len(tags) > 0:
-        questions.append("What are the tags "+str(tags)+" about?")
+    #if len(tags) > 0:
+    #    questions.append("What are the tags "+str(tags)+" about?")
 
     print("Preparing questions...")
     base_questions = [
-        f"""Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
+        f"""Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print your solution as fitting source code. The issue is enclosed within: <Issue> "
         {promptBody}
-        </Issue>""",
+        </Issue> [relevant files = {tags}]""",
         "In which class should the previously generated code be placed?"
     ]
     questions.extend(base_questions)
