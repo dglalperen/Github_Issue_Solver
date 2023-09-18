@@ -83,11 +83,12 @@ if __name__ == "__main__":
                 issue_body = replaceURLsWithFilenames(selected_issue) # pass the full issue
                 display_issue(selected_issue)
 
-
                 try:
                     promptLangchain(repo_url, issue_body, tags_list, potentially_relevant_files)  # Process the selected issue
                 except ValueError as ve:
-                    print(f"ValueError in promptLangchain function: {ve}")
+                    import traceback
+
+                    print(traceback.format_exc())
                     continue
 
                 print("Issue processed and result saved in '../result/result.txt' file.")
@@ -103,6 +104,11 @@ if __name__ == "__main__":
                 print("No selected issue or exiting.")
                 break
 
+
         except Exception as e:
-            print(f"An error occurred while processing the issue: {e}")
+
+            import traceback
+
+            print(traceback.format_exc())
+
 

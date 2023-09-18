@@ -4,6 +4,7 @@ import shutil
 
 from git import Repo
 def getRepo(repoURL):
+    print("Starting getRepo function...")
     name = repoURL.split("/")
     if not os.path.exists("repos/"):
         print("Creating repos folder")

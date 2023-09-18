@@ -1,17 +1,19 @@
 import os
-
 from dotenv import load_dotenv
+from langchain.memory import ConversationBufferMemory
+from langchain.vectorstores import DeepLake
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import ConversationalRetrievalChain, RetrievalQA
+from langchainLogic.indexer import indexRepo
+from utils.fetchRepos import getRepo
 from langchain.document_loaders import TextLoader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.vectorstores import DeepLake, Chroma
-from langchain.embeddings.openai import OpenAIEmbeddings
-
-from utils.fetchRepos import getRepo
+import pickle
 
 
-#from src.utils.fetchRepos import getTestRepo,readFromExcel
 
-def indexRepo(repoURL):
+def index_repo(repoURL):
     load_dotenv()
 
     os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
@@ -44,37 +46,47 @@ def indexRepo(repoURL):
         print("added documentation files to ")
 
     docs = []
+    chunk_file_name = []
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for file in filenames:
             # ignore node_modules and package-lock.json
             if ("node_modules" in dirpath or
                     '.idea' in dirpath or
+                    '__pycache__' in dirpath or
                     "package-lock.json" in file):
                 continue
             # ignore files that are not of the specified file extensions
+
             if file.endswith(tuple(fileextensions)):
-                print(file)
                 try:
                     loader = TextLoader(os.path.join(dirpath, file), encoding='utf-8')
                     current_docs = loader.load_and_split()
                     for doc in current_docs:
+
+                        chunk_file_name.append(file)
                         doc.metadata['file_name'] = file
                     docs.extend(current_docs)
                 except Exception as e:
                     pass
-
+    with open('chunk_file_names.pkl', 'wb') as file:
+        pickle.dump(chunk_file_name, file)
     # chunk the files
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=20)
     texts = text_splitter.split_documents(docs)
+    return texts
 
-    # Adding chunk ID to metadata
-    for idx, text in enumerate(texts):
-        text.metadata['chunk_id'] = idx
-        print(text.metadata['file_name'], text.metadata['chunk_id'])
 
-    print("Number of chunks: ", len(texts))
-    # embed the files and add them to the vector db
-    db = DeepLake(dataset_path="vectordbs/" + repo_name, embedding_function=embeddings)
-    db.add_documents(texts)
 
-    return str("vectordbs/" + repo_name)
+
+
+repoURL = 'https://github.com/kaan9700/chatbot'
+
+print("Starting promptLangchain function...")
+load_dotenv()
+
+os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
+
+print("Initializing embeddings...")
+embeddings = OpenAIEmbeddings(disallowed_special=())
+
+texts = index_repo(repoURL)

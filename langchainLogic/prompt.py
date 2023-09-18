@@ -8,9 +8,9 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 
 from langchainLogic.indexer import indexRepo
+from .retriever import CustomRetriever
 
-
-def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
+def promptLangchain(repoURL, promptBody, tags, relevantFiles=[]):
     print("Starting promptLangchain function...")
     load_dotenv()
 
@@ -23,30 +23,26 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
     #check if repo is already indexed
     if os.path.exists("vectordbs/"+repoURL.split("/")[-1]+"_doc"):
         print("repo already indexed")
-        db = DeepLake(dataset_path="vectordbs/"+repoURL.split("/")[-1]+"_doc", embedding_function=embeddings)
+
 
     else:
         print("repo not indexed yet")
-        db = DeepLake(dataset_path=indexRepo(repoURL), embedding_function=embeddings)
+        indexRepo(repoURL)
 
     print("Configuring retriever...")
-    retriever = db.as_retriever()
-    retriever.search_kwargs['score_threshold'] = 0.8
-    retriever.search_kwargs['fetch_k'] = 100
-    retriever.search_kwargs['search_type'] = 'mmr'
-    retriever.search_kwargs['lambda_mult'] = '0.7'
-    retriever.search_kwargs['k'] = 25
+    retriever = CustomRetriever(files=['train.py'])
     print("loaded retriever")
 
     print("Loading chat model...")
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     model = ChatOpenAI(model="gpt-4")
     qa = ConversationalRetrievalChain.from_llm(
-        model, retriever=retriever, memory=memory
-    )  # add verbose = True to see the full convo
+        model, retriever=retriever, memory=memory, verbose=False)  # add verbose = True to see the full convo
     questions = []
+
     if len(relevantFiles) > 0:
         questions.append("What are the files"+str(relevantFiles)+" about?")
+
 
     print("Preparing questions...")
     base_questions = [
@@ -54,7 +50,8 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles = []):
         {promptBody}
         </Issue>
         Relevant information for the following questions is provided in the tags: {tags}""",
-        "In which class should the previously generated code be placed?"
+        "In which class should the previously generated code be placed?",
+        'What are these code about and which files you can see?'
     ]
     questions.extend(base_questions)
     print("Starting conversation retrieval...")

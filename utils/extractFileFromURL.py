@@ -6,7 +6,7 @@ def extractFilesFromURL(issueText, stripLineNumbers=True):
     # Extract all URLS from the issue text
     urls = []
     for word in issueText["body"].split():
-        if word.startswith("http"):
+        if word.startswith("http") or word.startswith("https"):
             urls.append(word)
 
     sanitized_urls = []
