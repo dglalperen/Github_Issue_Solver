@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from langchain.document_loaders import TextLoader
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain.vectorstores import DeepLake, Chroma
 from langchain.embeddings.openai import OpenAIEmbeddings
 
@@ -17,7 +17,6 @@ def indexRepo(repoURL):
     os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
 
     # Set to true if you want to include documentation files
-    documentation = True
 
     embeddings = OpenAIEmbeddings(disallowed_special=())
     repoDir = getRepo(repoURL)
@@ -36,12 +35,7 @@ def indexRepo(repoURL):
 
     fileextensions = [
         ".ts", ".json", ".js", ".jsx", ".tsx", ".html", ".css", ".scss", ".less", ".py", ".java", ".cpp", ".h", ".c",
-        ".cs", ".go", ".php", ".rb", ".swift", ".kt", ".dart", ".rs", ".sh", ".yml", ".yaml", ".xml", ".txt"]
-
-    if documentation:
-        fileextensions.append("README.md")
-        repo_name = repo_name + "_doc"
-        print("added documentation files to ")
+        ".cs", ".go", ".php", ".rb", ".swift", ".kt", ".dart", ".rs", ".sh", ".txt"]
 
     docs = []
     for dirpath, dirnames, filenames in os.walk(root_dir):
