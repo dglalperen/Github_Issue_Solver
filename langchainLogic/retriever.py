@@ -3,9 +3,11 @@ from abc import ABC
 
 from langchain import LLMChain, PromptTemplate
 from langchain.chains import RetrievalQA, ConversationalRetrievalChain
+from langchain.chains.query_constructor.schema import AttributeInfo
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.memory import ConversationBufferMemory
+from langchain.retrievers import SelfQueryRetriever
 from langchain.vectorstores import DeepLake
 from dotenv import load_dotenv
 import os
@@ -45,7 +47,7 @@ class MyRetriever(BaseRetriever, BaseModel, ABC):
 
     def get_relevant_documents(self, query):
 
-        tempdb = DeepLake(embedding_function=OpenAIEmbeddings(disallowed_special=()), exec_option="python",
+        tempdb = DeepLake(embedding=OpenAIEmbeddings(disallowed_special=()), exec_option="python",
                           read_only=self.readlock)
         if not self.readlock:
             tempdb.add_documents(self.docs)
@@ -54,11 +56,39 @@ class MyRetriever(BaseRetriever, BaseModel, ABC):
         return reldocs
 
 
-def CustomRetriever(files, dataset_path):
+def CustomRetriever(files, dataset_path,issue):
     # Laden Sie den VectorIndex mit den hochgeladenen Chunks
+    #dataset_path = "../vectordbs/chatbot_doc"
+
+    metadata_field_info = [
+        AttributeInfo(
+            name="source",
+            description="The soruce file the chunk was extracted from",
+            type="string",
+        ),
+        AttributeInfo(
+            name="file_name",
+            description="The name of the file the chunk was extracted from",
+            type="string",
+        ),
+        AttributeInfo(
+            name="chunk_id",
+            description="the id of the chunk",
+            type="string",
+        ),
+    ]
+    document_content_description = "The sourcecode of a project"
+    model = ChatOpenAI(model="gpt-4")
+
     embeddings = OpenAIEmbeddings(disallowed_special=())
-    db = DeepLake(dataset_path=dataset_path, read_only=True, embedding_function=embeddings, exec_option="python")
+    db = DeepLake(dataset_path=dataset_path, read_only=True, embedding=embeddings, exec_option="python")
     docs = (db.similarity_search(query=" ", k=10000000))
+    retriever = SelfQueryRetriever.from_llm(
+        model, db, document_content_description, metadata_field_info, verbose=True
+    )
+    print(retriever.get_relevant_documents("What documents contain code to resolve the following issue? ->"+issue + "(relevant tags are: "+str(files)+")"))
+
+
     retriever = MyRetriever(docs=docs, files=files)
     context = get_docs(docs, files)
     return retriever, context
@@ -69,62 +99,21 @@ def deeplake_simsearch(embeddings, dataset_path, query, k):
     docs = (db.similarity_search(query=query, k=k))
     return docs
 
+# model = ChatOpenAI(model="gpt-4")
+# retriever = CustomRetriever(fil['aws'],)
+# memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+# qa = ConversationalRetrievalChain.from_llm(model, retriever=retriever, memory=memory, verbose=True)
+# res = qa.run(
+#     """
+#     a CNN should be used instead of the BERT model in the train.py script, because it can handle the type of data better.
+# The CNN should not be too complex, but also not too simple and should be generated using Tensorflow.
+# The CNN should be integrated into the logic and adapted according to the word vectors used. Change the code of it, as good as you can.
+#
+# """
+# )
+# print(res)
 
 
 
 
-# Beispiel zur Lösung eines Issues
-dataset_path = "../vectordbs/chatbot_doc"
-issue = ''' a CNN should be used instead of the BERT model in the train.py script, because it can handle the type of data better.
-The CNN should not be too complex, but also not too simple and should be generated using Tensorflow.
-The CNN should be integrated into the logic and adapted according to the word vectors used. Change the code of it, as good as you can.'''
 
-# Suche nach relevanten Dokumenten im DeepLake basierend auf dem gegebenen Issue
-issue_documents = deeplake_simsearch(OpenAIEmbeddings(disallowed_special=()), dataset_path, issue, 5)
-
-# Extrahiere die 'source'-Metadaten aus den gefundenen Dokumenten
-retrieved_sources = [doc.metadata['source'] for doc in issue_documents]
-
-# Entferne doppelte 'source'-Einträge, um eine eindeutige Liste zu erhalten
-unique_sources = list(set(retrieved_sources))
-
-# Liste der Dateien, die basierend auf Tags hinzugefügt werden sollen
-additional_files = ['repos/chatbot/chatbot_project/pipi.py', 'repos/chatbot/chatbot_project/train.py']
-
-# Kombiniere die eindeutigen 'source'-Einträge mit den zusätzlichen Dateien, wobei Dopplungen vermieden werden
-merged_sources = set(unique_sources).union(set(additional_files))
-
-# Konvertiere das Set wieder in eine Liste
-final_source_list = list(merged_sources)
-
-# Initialisiere das OpenAI-Chat-Modell
-model = ChatOpenAI(model="gpt-4")
-
-# Verwende die endgültige Liste der 'source'-Dateien, um den Retrieval-Prozess durchzuführen und den Kontext zu erhalten
-# 1. retriever ist dafür da, um es der ConversationalRetrievalChain zu übergeben.
-# 2. context ist dafür da, um es dem PromptTemplate zu übergeben.
-# In diesem Beispiel wird 2. verwendet.
-retriever, context = CustomRetriever(final_source_list, dataset_path)
-
-# Initialisiere den Speicher für die Konversationshistorie
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-
-# Definiere die Vorlage für den Eingabeaufforderungs-Text
-prompt_template = PromptTemplate(
-    input_variables=["text"],
-    template="""
-{text}
-"""
-)
-
-# Erstelle die Eingabe für die LLM-Kette, bestehend aus dem gegebenen Issue und dem Kontext (Code)
-inputs = {
-    "text": issue + str(context)
-}
-
-# Initialisiere und führe die Konversation aus
-chain = LLMChain(llm=model, memory=memory, prompt=prompt_template, verbose=True)
-result = chain.run(inputs)
-
-# Drucke das Ergebnis
-print(result)
