@@ -21,16 +21,18 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles=[]):
 
     print("Indexing repository...")
     #check if repo is already indexed
-    if os.path.exists("vectordbs/"+repoURL.split("/")[-1]+"_doc"):
+    ds_path = ""
+    if os.path.exists("vectordbs/"+repoURL.split("/")[-1]):
+        ds_path = "vectordbs/" + repoURL.split("/")[-1]
         print("repo already indexed")
 
 
     else:
         print("repo not indexed yet")
-        indexRepo(repoURL)
+        ds_path = indexRepo(repoURL)
 
     print("Configuring retriever...")
-    retriever = CustomRetriever(files=['train.py'])
+    retriever = CustomRetriever(files=tags,dataset_path=ds_path)
     print("loaded retriever")
 
     print("Loading chat model...")
