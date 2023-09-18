@@ -43,6 +43,7 @@ def indexRepo(repoURL):
             # ignore node_modules and package-lock.json
             if ("node_modules" in dirpath or
                     '.idea' in dirpath or
+                    '__pycache__' in dirpath or
                     "package-lock.json" in file):
                 continue
             # ignore files that are not of the specified file extensions

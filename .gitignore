@@ -1,3 +1,4 @@
 vectordbs
 repos
 .env
+__pycache__
