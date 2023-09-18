@@ -69,22 +69,22 @@ if __name__ == "__main__":
         exit(1)
 
     # Get tags from user
-    tags = input("Please enter the tags for the issue, seperated with ',': ")
-    tags_list = [tag.strip() for tag in tags.split(",")]
-    print(tags_list)
+
 
 
     while True:
         try:
             selected_issue = issue_handler.select_issue()
-
+            tags = input("Please enter the tags for the issue, seperated with ',': ")
+            tags_list = [tag.strip() for tag in tags.split(",")]
+            print(tags_list)
             if selected_issue:
                 potentially_relevant_files = extractFilesFromURL(selected_issue)
                 issue_body = replaceURLsWithFilenames(selected_issue) # pass the full issue
                 display_issue(selected_issue)
 
                 try:
-                    promptLangchain(repo_url, issue_body, tags_list, potentially_relevant_files)  # Process the selected issue
+                    promptLangchain(repo_url, issue_body["body"], tags_list, potentially_relevant_files)  # Process the selected issue
                 except ValueError as ve:
                     import traceback
 
