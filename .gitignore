@@ -2,3 +2,4 @@ vectordbs
 repos
 .env
 __pycache__
+.test.py
