@@ -96,6 +96,7 @@ if __name__ == "__main__":
     # Konvertiere das Set wieder in eine Liste
     final_source_list = list(merged_sources)
     print(final_source_list)
+    
     # Initialisiere das OpenAI-Chat-Modell
     model = ChatOpenAI(model="gpt-4")
 
