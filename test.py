@@ -1,92 +1,50 @@
-import os
-from dotenv import load_dotenv
-from langchain.memory import ConversationBufferMemory
-from langchain.vectorstores import DeepLake
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import ConversationalRetrievalChain, RetrievalQA
-from langchainLogic.indexer import indexRepo
-from utils.fetchRepos import getRepo
-from langchain.document_loaders import TextLoader
-from langchain.text_splitter import CharacterTextSplitter
-import pickle
+import re
 
-
-
-def index_repo(repoURL):
-    load_dotenv()
-
-    os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
-
-    # Set to true if you want to include documentation files
-    documentation = True
-
-    embeddings = OpenAIEmbeddings(disallowed_special=())
-    repoDir = getRepo(repoURL)
-
-    # load files in repo
-    root_dir = repoDir
-    print("project directory is: " + root_dir)
-    # get name of repo
-    repo_name = root_dir.split("/")[-1]
-    print("repo name is: " + repo_name)
-
-    # check if repo is already indexed
-    if os.path.exists("vectordbs/" + repo_name):
-        print("repo already indexed")
-        return str("vectordbs/" + repo_name)
-
+def extract_urls_and_paths(text):
     fileextensions = [
         ".ts", ".json", ".js", ".jsx", ".tsx", ".html", ".css", ".scss", ".less", ".py", ".java", ".cpp", ".h", ".c",
-        ".cs", ".go", ".php", ".rb", ".swift", ".kt", ".dart", ".rs", ".sh", ".yml", ".yaml", ".xml", ".txt"]
+        ".cs", ".go", ".php", ".rb", ".swift", ".kt", ".dart", ".rs", ".sh", ".txt"]
 
-    if documentation:
-        fileextensions.append("README.md")
-        repo_name = repo_name + "_doc"
-        print("added documentation files to ")
+    # Regulärer Ausdruck zum Finden von URLs
+    url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    urls = re.findall(url_pattern, text)
 
-    docs = []
-    chunk_file_name = []
-    for dirpath, dirnames, filenames in os.walk(root_dir):
-        for file in filenames:
-            # ignore node_modules and package-lock.json
-            if ("node_modules" in dirpath or
-                    '.idea' in dirpath or
-                    '__pycache__' in dirpath or
-                    "package-lock.json" in file):
-                continue
-            # ignore files that are not of the specified file extensions
+    # Regulärer Ausdruck zum Finden von Dateipfaden
+    path_pattern = "|".join([r'(?<!/)\.\./[^\s]+' + re.escape(ext) + r'|[^/\s]+' + re.escape(ext) for ext in fileextensions])
+    paths = re.findall(path_pattern, text)
 
-            if file.endswith(tuple(fileextensions)):
-                try:
-                    loader = TextLoader(os.path.join(dirpath, file), encoding='utf-8')
-                    current_docs = loader.load_and_split()
-                    for doc in current_docs:
+    extracted_items = urls + paths
 
-                        chunk_file_name.append(file)
-                        doc.metadata['file_name'] = file
-                    docs.extend(current_docs)
-                except Exception as e:
-                    pass
-    with open('chunk_file_names.pkl', 'wb') as file:
-        pickle.dump(chunk_file_name, file)
-    # chunk the files
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=20)
-    texts = text_splitter.split_documents(docs)
-    return texts
+    # Ersetzen von gefundenen URLs und Dateipfaden im Text
+    for item in extracted_items:
+        for ext in fileextensions:
+            if item.endswith(ext):
+                text = text.replace(item, item.split("/")[-1].replace(ext, "") + " file")
+
+    # Entferne mehrfache Leerzeichen
+    text = ' '.join(text.split())
+
+    return text, extracted_items
+
+def preprocess_query(query):
+    def replace_with_descriptor(match_obj):
+        full_match = match_obj.group(0)
+        ext = full_match.split(".")[-1].capitalize() + "-File"
+        return full_match + " " + ext
+
+    # Combine both patterns
+    combined_pattern = r"(([\w\-]+\/)+[\w\-]+\.\w+)|\b(?<!/)(\w+\.\w+)\b"
+
+    # Use the `re.sub` method to replace matches in the string
+    return re.sub(combined_pattern, replace_with_descriptor, query)
 
 
 
+# Test
+text = '''a CNN should be used instead of the BERT model in the ../repos/chatbot/chatbot_project/train.py file, because it can handle the type of data better.
+Use the ../config/settings.ts config for TypeScript and check the ../assets/styles/main.scss for styling.
+The CNN should be integrated into the logic and adapted according to the word vectors used. Change the code of it, as good as you can.'''
 
-
-repoURL = 'https://github.com/kaan9700/chatbot'
-
-print("Starting promptLangchain function...")
-load_dotenv()
-
-os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
-
-print("Initializing embeddings...")
-embeddings = OpenAIEmbeddings(disallowed_special=())
-
-texts = index_repo(repoURL)
+edited_text, extracted_list = extract_urls_and_paths(text)
+print(edited_text)
+print(extracted_list)

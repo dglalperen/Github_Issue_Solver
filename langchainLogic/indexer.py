@@ -29,9 +29,9 @@ def indexRepo(repoURL):
     print("repo name is: " + repo_name)
 
     # check if repo is already indexed
-    if os.path.exists("vectordbs/" + repo_name):
+    if os.path.exists("../vectordbs/" + repo_name):
         print("repo already indexed")
-        return str("vectordbs/" + repo_name)
+        return str("../vectordbs/" + repo_name)
 
     fileextensions = [
         ".ts", ".json", ".js", ".jsx", ".tsx", ".html", ".css", ".scss", ".less", ".py", ".java", ".cpp", ".h", ".c",
@@ -56,20 +56,26 @@ def indexRepo(repoURL):
                         doc.metadata['file_name'] = file
                     docs.extend(current_docs)
                 except Exception as e:
+                    print(e)
                     pass
 
     # chunk the files
+
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=20)
     texts = text_splitter.split_documents(docs)
 
     # Adding chunk ID to metadata
     for idx, text in enumerate(texts):
         text.metadata['chunk_id'] = idx
-        print(text.metadata['file_name'], text.metadata['chunk_id'])
-
     print("Number of chunks: ", len(texts))
     # embed the files and add them to the vector db
-    db = DeepLake(dataset_path="vectordbs/" + repo_name, embedding_function=embeddings)
+    db = DeepLake(dataset_path="../vectordbs/" + repo_name, embedding_function=embeddings)
     db.add_documents(texts)
 
-    return str("vectordbs/" + repo_name)
+    return str("../vectordbs/" + repo_name)
+
+
+
+if __name__ == "__main__":
+    repoURL = "https://github.com/kaan9700/chatbot"
+    indexRepo(repoURL)
