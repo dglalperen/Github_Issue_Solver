@@ -48,7 +48,6 @@ def indexRepo(repoURL):
                 continue
             # ignore files that are not of the specified file extensions
             if file.endswith(tuple(fileextensions)):
-                print(file)
                 try:
                     loader = TextLoader(os.path.join(dirpath, file), encoding='utf-8')
                     current_docs = loader.load_and_split()
@@ -67,6 +66,7 @@ def indexRepo(repoURL):
     # Adding chunk ID to metadata
     for idx, text in enumerate(texts):
         text.metadata['chunk_id'] = idx
+        
     print("Number of chunks: ", len(texts))
     # embed the files and add them to the vector db
     db = DeepLake(dataset_path="../vectordbs/" + repo_name, embedding_function=embeddings)
