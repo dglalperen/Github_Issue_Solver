@@ -6,27 +6,31 @@ def extractFilesFromURL(issueText, stripLineNumbers=True):
     # Extract all URLS from the issue text
     urls = []
     for word in issueText["body"].split():
-        if word.startswith("http") or word.startswith("https"):
-            urls.append(word)
+        if word.startswith("http"):
+            strip_chars = ",.!'\"?"
+            urls.append(word.rstrip(strip_chars))
 
     sanitized_urls = []
     # Check if the URL is a GitHub URL and linked to the repo
     for url in urls:
-        if "github.com" in url and "blob" and repo_name in url:
+        if "github.com" in url and "blob" in url and repo_name in url:
             sanitized_urls.append(url)
 
     print(f"Sanitized URLs: {sanitized_urls}")
-    filenames = []
-    # Extract the file name from the URL
+    filepaths = []
+    # Extract the file path from the URL
     for san_urls in sanitized_urls:
-        file_name = san_urls.split("/")[-1]
+        parts = san_urls.split("/")
+        repo_index = parts.index(repo_name)
+        # Construct the path from the parts after the repo name (excluding blob and main)
+        file_path = "/".join(parts[repo_index:])
+        file_path = file_path.replace("blob/main/", "")
         if stripLineNumbers:
-            # remove the #L** from the file name
-            file_name = file_name.split("#")[0]
-        filenames.append(file_name)
-        print(f"File name: {file_name}")
+            # remove the #L** from the file path
+            file_path = '../repos/' + file_path.split("#")[0]
+        filepaths.append(file_path)
 
-    return filenames
+    return filepaths
 
 def replaceURLsWithFilenames(issueBody):
     print("Starting replaceURLsWithFilenames function...")

@@ -1,4 +1,51 @@
-The text provided does not contain information about a file named 'train.py'.
-Sorry, but I can't assist with that.
-The text does not provide information about a file named 'train.py'.
-Sorry, but I can't assist with that.
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.layers import Dense, Dropout, Conv1D, GlobalMaxPooling1D
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from sklearn.model_selection import train_test_split
+from functions import read_database, label_encoding, process_text
+from tensorflow.keras.preprocessing.text import Tokenizer
+
+# 1. Load and preprocess data
+sentences_raw, labels_raw, all_intents = read_database('../../db.sqlite3')
+for i in range(len(sentences_raw)):
+    sentences_raw[i] = process_text(sentences_raw[i])
+
+# Split the data into train and test sets
+sentences_train, sentences_test, labels_train, labels_test = train_test_split(sentences_raw, labels_raw, test_size=0.3)
+
+# 2. Tokenize the data using Tokenizer
+max_words = 1000
+max_len = 50
+tokenizer = Tokenizer(num_words=max_words)
+tokenizer.fit_on_texts(sentences_train)
+sequences = tokenizer.texts_to_sequences(sentences_train)
+sequences_matrix = pad_sequences(sequences, maxlen=max_len)
+
+# 3. Create CNN model
+def create_model():
+    model = Sequential()
+    model.add(Conv1D(128, 3, activation='relu', input_shape=(max_len, max_words)))
+    model.add(GlobalMaxPooling1D())
+    model.add(Dense(64, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(len(all_intents), activation='softmax'))
+    return model
+
+# 4. Train the model
+model = create_model()
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.fit(sequences_matrix, labels_train, batch_size=32, epochs=10, validation_split=0.2)
+
+# 5. Test the model
+test_sequences = tokenizer.texts_to_sequences(sentences_test)
+test_sequences_matrix = pad_sequences(test_sequences, maxlen=max_len)
+accuracy = model.evaluate(test_sequences_matrix, labels_test)[1]
+print('Test set accuracy:', accuracy)
+
+# 6. Save the trained model
+model.save('./data/cnn_model')
+```
+

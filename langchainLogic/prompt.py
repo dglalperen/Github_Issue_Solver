@@ -1,6 +1,7 @@
 import os
 
 from dotenv import load_dotenv
+from langchain import LLMChain, PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores import DeepLake
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -8,9 +9,10 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 
 from langchainLogic.indexer import indexRepo
-from .retriever import CustomRetriever
+from .retriever import CustomRetriever, deeplake_simsearch
 
-def promptLangchain(repoURL, promptBody, tags, relevantFiles=[]):
+
+def promptLangchain(repoURL, promptBody, tags, related_files, type):
     print("Starting promptLangchain function...")
     load_dotenv()
 
@@ -20,9 +22,10 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles=[]):
     embeddings = OpenAIEmbeddings(disallowed_special=())
 
     print("Indexing repository...")
-    #check if repo is already indexed
+
+    # check if repo is already indexed
     ds_path = ""
-    if os.path.exists("vectordbs/"+repoURL.split("/")[-1]):
+    if os.path.exists("vectordbs/" + repoURL.split("/")[-1]):
         ds_path = "vectordbs/" + repoURL.split("/")[-1]
         print("repo already indexed")
 
@@ -31,46 +34,82 @@ def promptLangchain(repoURL, promptBody, tags, relevantFiles=[]):
         print("repo not indexed yet")
         ds_path = indexRepo(repoURL)
 
+    print("Create Context...")
+
+    # Suche nach relevanten Dokumenten im DeepLake basierend auf dem gegebenen Issue
+    issue_documents = deeplake_simsearch(OpenAIEmbeddings(disallowed_special=()), ds_path, promptBody, 5)
+
+    # Extrahiere die 'source'-Metadaten aus den gefundenen Dokumenten
+    issue_retrieved_sources = [doc.metadata['source'] for doc in issue_documents]
+
+    # Entferne doppelte 'source'-Einträge, um eine eindeutige Liste zu erhalten
+    unique_issue_sources = list(set(issue_retrieved_sources))
+
+    # Kombiniere die eindeutigen 'source'-Einträge mit den zusätzlichen Dateien, wobei Dopplungen vermieden werden
+    merged_sources = set(unique_issue_sources).union(set(related_files))
+
+    # Konvertiere das Set wieder in eine Liste
+    final_source_list = list(merged_sources)
+
     print("Configuring retriever...")
-    retriever = CustomRetriever(files=tags,dataset_path=ds_path)
+    retriever, context = CustomRetriever(final_source_list, ds_path)
     print("loaded retriever")
 
     print("Loading chat model...")
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     model = ChatOpenAI(model="gpt-4")
-    qa = ConversationalRetrievalChain.from_llm(
-        model, retriever=retriever, memory=memory, verbose=False)  # add verbose = True to see the full convo
+
+    print("Preparing questions and initialize Conversation...")
     questions = []
+    if type == "retriever":
+        qa = ConversationalRetrievalChain.from_llm(
+            model, retriever=retriever, memory=memory, verbose=False)  # add verbose = True to see the full convo
 
-    if len(relevantFiles) > 0:
-        questions.append("What are the files"+str(relevantFiles)+" about?")
+        if len(relevantFiles) > 0:
+            questions.append("What are the files" + str(relevantFiles) + " about?")
 
+        base_questions = [
+            f"""Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
+              {promptBody}
+              </Issue>
+              Relevant information for the following questions is provided in the tags: {tags}""",
+            "In which class should the previously generated code be placed?",
+            'What are these code about and which files you can see?'
+        ]
+        questions.extend(base_questions)
+        print("Starting conversation...")
+        chat_history = []
 
-    print("Preparing questions...")
-    base_questions = [
-        f"""Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
-        {promptBody}
-        </Issue>
-        Relevant information for the following questions is provided in the tags: {tags}""",
-        "In which class should the previously generated code be placed?",
-        'What are these code about and which files you can see?'
-    ]
-    questions.extend(base_questions)
-    print("Starting conversation retrieval...")
-    chat_history = []
-    file_names = []
-    for question in questions:
-        result = qa({"question": question, "chat_history": chat_history})
-        print(f"-> **Question**: {question} \n")
-        print(f"**Answer**: {result['answer']} \n")
+        for question in questions:
+            results = qa({"question": question, "chat_history": chat_history})
+            print(f"-> **Question**: {question} \n")
+            print(f"**Answer**: {results['answer']} \n")
+            result = results["answer"]
 
-        print("Appending result to text file...")
+    if type == "context":
+        prompt_template = PromptTemplate(
+            input_variables=["text"],
+            template="""
+        Try to resolve the issue in the given text the best way you are able to. Only print the Source code as answer:
+        
+        {text}
+        """
+        )
+        inputs = {
+            "text": promptBody + '\n' + str(context)
+        }
 
-        # save result to text file with reponame
-        repo_name = repoURL.split("/")[-1]
+        chain = LLMChain(llm=model, memory=memory, prompt=prompt_template, verbose=True)
+        result = chain.run(inputs)
 
-        with open("result/result_" + repo_name + ".txt", "a") as myfile:
-            myfile.write(result["answer"] + "\n")
-            myfile.close()
+    print(result)
+    print("Appending result to text file...")
+
+    # save result to text file with reponame
+    repo_name = repoURL.split("/")[-1]
+
+    with open("result/result_" + repo_name + ".txt", "a") as myfile:
+        myfile.write(result + "\n")
+        myfile.close()
 
     print("promptLangchain function completed.")
