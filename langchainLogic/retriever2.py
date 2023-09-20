@@ -99,16 +99,7 @@ def deeplake_simsearch(embeddings, dataset_path, query, k):
     docs = (db.similarity_search(query=query, k=k))
     return docs
 
-# model = ChatOpenAI(model="gpt-4")
-# retriever = CustomRetriever(fil['aws'],)
-# memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-# qa = ConversationalRetrievalChain.from_llm(model, retriever=retriever, memory=memory, verbose=True)
-# res = qa.run(
-#     """
-#     a CNN should be used instead of the BERT model in the train.py script, because it can handle the type of data better.
-# The CNN should not be too complex, but also not too simple and should be generated using Tensorflow.
-# The CNN should be integrated into the logic and adapted according to the word vectors used. Change the code of it, as good as you can.
-#
-# """
-# )
-# print(res)
+"""files = ['train.py']
+dataset_path = "../vectordbs/chatbot"
+CustomRetriever(files, dataset_path," a CNN should be used instead of the BERT model in the train.py script, because it can handle the type of data better.")
+"""

@@ -66,10 +66,10 @@ def indexRepo(repoURL):
     # Adding chunk ID to metadata
     for idx, text in enumerate(texts):
         text.metadata['chunk_id'] = idx
-        
+
     print("Number of chunks: ", len(texts))
     # embed the files and add them to the vector db
-    db = DeepLake(dataset_path="../vectordbs/" + repo_name, embedding_function=embeddings)
+    db = DeepLake(dataset_path="../vectordbs/" + repo_name, embedding=embeddings)
     db.add_documents(texts)
 
     return str("../vectordbs/" + repo_name)

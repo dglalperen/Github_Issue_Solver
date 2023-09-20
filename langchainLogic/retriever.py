@@ -42,7 +42,7 @@ class MyRetriever(BaseRetriever, BaseModel, ABC):
 
     def get_relevant_documents(self, query):
 
-        tempdb = DeepLake(embedding_function=OpenAIEmbeddings(disallowed_special=()), exec_option="python",
+        tempdb = DeepLake(embedding=OpenAIEmbeddings(disallowed_special=()), exec_option="python",
                           read_only=self.readlock)
         if not self.readlock:
             tempdb.add_documents(self.docs)
@@ -54,7 +54,7 @@ class MyRetriever(BaseRetriever, BaseModel, ABC):
 def CustomRetriever(files, dataset_path):
     # Laden Sie den VectorIndex mit den hochgeladenen Chunks
     embeddings = OpenAIEmbeddings(disallowed_special=())
-    db = DeepLake(dataset_path=dataset_path, read_only=True, embedding_function=embeddings, exec_option="python")
+    db = DeepLake(dataset_path=dataset_path, read_only=True, embedding=embeddings, exec_option="python")
     docs = (db.similarity_search(query=" ", k=10000000))
     retriever = MyRetriever(docs=docs, files=files)
     context = get_docs(docs, files)
@@ -62,7 +62,7 @@ def CustomRetriever(files, dataset_path):
 
 
 def deeplake_simsearch(embeddings, dataset_path, query, k):
-    db = DeepLake(dataset_path=dataset_path, read_only=True, embedding_function=embeddings, exec_option="python")
+    db = DeepLake(dataset_path=dataset_path, read_only=True, embedding=embeddings, exec_option="python")
     docs = (db.similarity_search(query=query, k=k))
     return docs
 

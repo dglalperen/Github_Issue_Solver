@@ -57,7 +57,7 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
 
     print("Loading chat model...")
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-    model = ChatOpenAI(model="gpt-4")
+    model = ChatOpenAI(model="gpt-4", temperature=0.3)
 
     print("Preparing questions and initialize Conversation...")
     questions = []
@@ -65,8 +65,8 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
         qa = ConversationalRetrievalChain.from_llm(
             model, retriever=retriever, memory=memory, verbose=False)  # add verbose = True to see the full convo
 
-        if len(relevantFiles) > 0:
-            questions.append("What are the files" + str(relevantFiles) + " about?")
+        if len(related_files) > 0:
+            questions.append("What are the files" + str(related_files) + " about?")
 
         base_questions = [
             f"""Resolve the issue in the given text the best way you are able to, which is delimited by XML tags. Only print the Source code as answer. The issue is enclosed within: <Issue> "
@@ -90,7 +90,9 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
         prompt_template = PromptTemplate(
             input_variables=["text"],
             template="""
-        Try to resolve the issue in the given text the best way you are able to. Only print the Source code as answer:
+        Try to resolve the issue in the given text with the given code in the best way you are able to. 
+        Edit the existing code and also use the functions and methods that are already in use, unless you need to develop new ones
+        Only provide the Source code as answer:
         
         {text}
         """

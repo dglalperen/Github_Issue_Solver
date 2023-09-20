@@ -49,3 +49,404 @@ print('Test set accuracy:', accuracy)
 model.save('./data/cnn_model')
 ```
 
+The given text suggests replacing the BERT model with a CNN (Convolutional Neural Network) model in the script. To do so, tensorflow would be used to generate the CNN model. This is an example of how the code might look like:
+
+```python
+# Import necessary packages
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, Dense, Flatten, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# Prepare your data (X and y)
+# Data preparation steps depend on the specific data used
+
+# Define the CNN model
+model = Sequential()
+model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(50,50,1))) # adjust the input shape to match your data
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(Dropout(0.5))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(num_classes, activation='softmax')) # num_classes should be the number of classes in your data
+
+# Compile the model
+model.compile(loss=tf.keras.losses.categorical_crossentropy, 
+              optimizer=Adam(), 
+              metrics=['accuracy'])
+
+# Train the model
+model.fit(X_train, y_train, 
+          batch_size=128, 
+          epochs=10, 
+          verbose=1, 
+          validation_data=(X_test, y_test))
+
+# Save the model
+model.save('path_to_save_your_model')
+```
+
+This code creates a simple CNN using tensorflow's Keras API. The model is compiled with Adam optimizer and categorical crossentropy loss function because it is a multiclass classification problem. The model is then trained on the training data and validated on the test data. Finally, the trained model is saved to a specified location. The parameters used in the model (such as the number of filters, kernel size, dropout rate, number of dense units, batch size, epochs) can be adjusted according to the specific problem and data.
+The context provided includes several Python scripts, which are largely involved in processing and handling MRI data for a chatbot. It also includes the use of machine learning models for data classification. Here are the main functionalities and files you can identify from the code:
+
+1. `encoded_mri_content.pickle` and `encoded_mri_titles.pickle`: These are pickle files that contain encoded MRI content and titles respectively. The encoding is done using a model (not specified in the code) and the encoded data is stored as numpy arrays.
+
+2. `all_intents.pickle`: This is a pickle file that contains all possible intents or actions that the chatbot can perform. 
+
+3. `urls.pickle`: This file contains URLs that the chatbot can return as a response to a user's query.
+
+4. The function `get_mriquestions_content()` scrapes the content of a webpage for chatbot responses.
+
+5. The function `get_encoded_content(library)` encodes the titles from a library of entries.
+
+6. There is also a BERT model for sequence classification, which is trained on the intents. 
+
+7. There's a condition at the end of the code that checks the accuracy of the title and content. If the accuracy is above 0.8, it returns the URL related to the user's concern. If not, it shows a message saying that it does not have any information regarding the user's request.
+
+8. The code also includes a splitting of the data into training and testing sets. 
+
+9. Various libraries used include spacy, pandas, sqlite3, sklearn, pickle, tensorflow, nltk, BeautifulSoup, urllib, sentence_transformers, scipy, numpy, os, and django. 
+
+Remember, this is a high-level overview and the actual functionality could depend on the complete code and how these snippets are used within it.
+The first step will be to import the necessary libraries for creating a CNN model in TensorFlow:
+
+```python
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dense
+```
+
+Then, a function to create the CNN model can be implemented:
+
+```python
+def create_cnn_model(vocab_size, embedding_dim, max_length, num_classes):
+    model = Sequential()
+
+    model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+    model.add(Conv1D(128, 5, activation='relu'))
+    model.add(GlobalMaxPooling1D())
+    model.add(Dense(10, activation='relu'))
+    model.add(Dense(num_classes, activation='softmax'))
+
+    model.compile(loss='sparse_categorical_crossentropy',
+                  optimizer='adam',
+                  metrics=['accuracy'])
+    
+    return model
+```
+In the function above, `vocab_size` is the number of unique words in your text data, `embedding_dim` is the size of the word vectors, `max_length` is the maximum length of the sentences, and `num_classes` is the number of output classes.
+
+Now, replace the existing BERT model creation and training code with the new CNN model. You will need to adjust the parameters according to your data:
+
+```python
+# Define parameters
+vocab_size = 10000  # adjust this to your data
+embedding_dim = 100  # adjust this to your data
+max_length = 50  # adjust this to your data
+num_classes = len(all_intents)
+
+# Create CNN model
+model = create_cnn_model(vocab_size, embedding_dim, max_length, num_classes)
+
+# Train model
+model.fit(train_dataset, epochs=100, validation_data=test_dataset)
+
+# Save model
+model.save('./data/cnn_model')
+```
+
+Please ensure that the data is correctly preprocessed into the format that the CNN model expects. The `train_dataset` and `test_dataset` should be instances of `tf.data.Dataset` where each example is a tuple of input data and labels. The input data should be a sequence of integers representing the words in the sentence. You can use `tf.keras.preprocessing.text.Tokenizer` for converting the raw text data into sequences of integers.
+Based on the given problem, we need to replace the BERT model with a CNN model using Tensorflow in the train.py script. Here is the revised source code:
+
+```python
+import numpy as np
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dense
+from functions import read_database, label_encoding, process_text
+
+# 1. Load and preprocess data
+sentences_raw, labels_raw, all_intents = read_database('../../db.sqlite3')
+for i in range(len(sentences_raw)):
+    sentences_raw[i] = process_text(sentences_raw[i])
+
+# Split the data into train and test sets
+sentences_train, sentences_test, labels_train, labels_test = train_test_split(sentences_raw, labels_raw, test_size=0.3)
+
+# 2. Tokenize the data using Tensorflow Tokenizer
+tokenizer = Tokenizer(num_words=5000, oov_token="<OOV>")
+tokenizer.fit_on_texts(sentences_train)
+word_index = tokenizer.word_index
+
+train_sequences = tokenizer.texts_to_sequences(sentences_train)
+test_sequences = tokenizer.texts_to_sequences(sentences_test)
+
+# Pad sequences
+train_padded = pad_sequences(train_sequences, maxlen=50, padding='post', truncating='post')
+test_padded = pad_sequences(test_sequences, maxlen=50, padding='post', truncating='post')
+
+# Convert labels to tensors
+y_train = label_encoding(labels_train)
+y_test = label_encoding(labels_test)
+
+# 3. Create a CNN model
+vocab_size = len(word_index)
+embedding_dim = 50
+num_labels = len(all_intents)
+
+model = Sequential([
+    Embedding(vocab_size, embedding_dim, input_length=50),
+    Conv1D(128, 5, activation='relu'),
+    GlobalMaxPooling1D(),
+    Dense(64, activation='relu'),
+    Dense(num_labels, activation='softmax')
+])
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.summary()
+
+# 4. Train the model
+model.fit(train_padded, y_train, epochs=10, validation_data=(test_padded, y_test))
+
+# 5. Save the trained model
+model.save("./data/cnn_model")
+```
+This code replaces the BERT model with a simple CNN model in Tensorflow. It starts by loading and preprocessing the data, then tokenizes the sentences using Tensorflow's Tokenizer. The sequences are then padded to a maximum length of 50. The CNN model is created with an Embedding layer, a Conv1D layer, a GlobalMaxPooling1D layer, and two Dense layers. The model is then compiled and trained on the training data. Finally, the trained model is saved.
+The source code should be modified to use a Convolutional Neural Network (CNN) instead of the BERT model. Here's how the code could be modified:
+
+```python
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dense
+
+# Get the word vectors
+vocab_size = len(tokenizer.word_index) + 1
+embedding_dim = 100  # Or any other dimension depending on the word vectors used
+
+# Initialize the model
+model = Sequential()
+
+# Add layers
+model.add(Embedding(vocab_size, embedding_dim, input_length=max_tokens))
+model.add(Conv1D(128, 5, activation='relu'))
+model.add(GlobalMaxPooling1D())
+model.add(Dense(10, activation='relu'))
+model.add(Dense(num_labels, activation='softmax'))
+
+# Compile the model
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test), verbose=2)
+
+# Save the model
+model.save('./data/cnn_model')
+```
+
+Please note that `X_train`, `y_train`, `X_test`, and `y_test` are the training and testing data respectively. Also, `num_labels` is the number of different labels in the data.
+
+The model architecture can be adjusted according to the complexity of the data. 
+
+The model is trained for 10 epochs. This can be adjusted according to the convergence of the model.
+
+The model is saved to the directory './data/' with the name 'cnn_model'. This can be adjusted based on your preference.
+```python
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# Load and preprocess data
+sentences_raw, labels_raw, all_intents = read_database('../../db.sqlite3')
+for i in range(len(sentences_raw)):
+    sentences_raw[i] = process_text(sentences_raw[i])
+sentences_train, sentences_test, labels_train, labels_test = train_test_split(sentences_raw, labels_raw, test_size=0.3)
+
+# Tokenizing the data
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts(sentences_train)
+X_train = tokenizer.texts_to_sequences(sentences_train)
+X_test = tokenizer.texts_to_sequences(sentences_test)
+
+# Padding the sequences
+max_len = 50
+X_train = pad_sequences(X_train, maxlen=max_len, padding="post", truncating="post")
+X_test = pad_sequences(X_test, maxlen=max_len, padding="post", truncating="post")
+
+# Convert labels to one-hot vectors
+y_train = label_encoding(labels_train)
+y_test = label_encoding(labels_test)
+
+# Define the CNN model
+model = models.Sequential()
+model.add(layers.Embedding(input_dim=5000, output_dim=16, input_length=max_len))
+model.add(layers.Conv1D(32, 3, activation='relu'))
+model.add(layers.GlobalMaxPooling1D())
+model.add(layers.Dense(32, activation='relu'))
+model.add(layers.Dense(num_labels, activation='softmax'))
+
+# Compile the model
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+
+# Save the model
+model.save("./data/cnn_model")
+```
+The code provided uses BERT for sequence classification. To replace it with a Convolutional Neural Network (CNN) in TensorFlow, the following steps can be followed. It is assumed that the data has been preprocessed and tokenized.
+
+First, import the necessary libraries:
+
+```python
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten, Embedding, Conv1D, MaxPooling1D, GlobalMaxPooling1D
+```
+
+Next, tokenize and pad the sequences:
+
+```python
+tokenizer = Tokenizer(num_words=5000, oov_token="<OOV>")
+tokenizer.fit_on_texts(sentences_train)
+
+train_sequences = tokenizer.texts_to_sequences(sentences_train)
+train_padded = pad_sequences(train_sequences, maxlen=50, padding='post', truncating='post')
+
+test_sequences = tokenizer.texts_to_sequences(sentences_test)
+test_padded = pad_sequences(test_sequences, maxlen=50, padding='post', truncating='post')
+```
+
+Define the CNN model:
+
+```python
+model = Sequential()
+model.add(Embedding(5000, 32, input_length=50))
+model.add(Conv1D(32, 3, activation='relu'))
+model.add(MaxPooling1D(pool_size=2))
+model.add(Flatten())
+model.add(Dense(num_labels, activation='softmax'))
+
+model.compile(loss='sparse_categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
+```
+
+Train the model:
+
+```python
+model.fit(train_padded, labels_train, epochs=100, validation_data=(test_padded, labels_test))
+```
+
+Evaluate the model:
+
+```python
+loss, accuracy = model.evaluate(test_padded, labels_test)
+print(f'Test Accuracy: {accuracy:.2f}')
+```
+
+Save the model:
+
+```python
+model.save('./data/cnn_model')
+```
+
+This is a simple example and the CNN architecture, as well as the hyperparameters, may need to be adjusted according to the specific task and data.
+Here is a simplified version of a CNN model using TensorFlow that you can use to replace the BERT model in the train.py script. This model is not too complex, but also not too simple. You can adjust the parameters according to your needs.
+
+```python
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dense
+
+# Assuming that vocab_size is the number of unique words in your text data, 
+# and that max_length is the maximum length of a sentence.
+vocab_size = 10000
+max_length = 50
+
+# Define the model
+model = Sequential()
+
+# Add an Embedding layer
+model.add(Embedding(vocab_size, 128, input_length=max_length))
+
+# Add a Convolutional layer
+model.add(Conv1D(128, 5, activation='relu'))
+
+# Add a Global Max Pooling layer
+model.add(GlobalMaxPooling1D())
+
+# Add a Dense layer
+model.add(Dense(10, activation='relu'))
+
+# Add the output layer
+model.add(Dense(1, activation='sigmoid'))
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+# Print the summary of the model
+model.summary()
+```
+
+Please note that you will need to adjust the parameters of the Embedding layer and the output layer according to your specific use case. For example, the input dimension of the Embedding layer should be equal to the number of unique words in your text data, and the number of neurons in the output layer should be equal to the number of classes in your classification task.
+The given code uses a BERT model for training, but the requirement is to use a CNN model instead. Here is how the code can be modified to use a CNN model with Tensorflow:
+
+```python
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Embedding, Conv1D, GlobalMaxPooling1D
+from tensorflow.keras.optimizers import Adam
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from functions import read_database, process_text
+
+# 1. Load and preprocess data
+sentences_raw, labels_raw, all_intents = read_database('../../db.sqlite3')
+for i in range(len(sentences_raw)):
+    sentences_raw[i] = process_text(sentences_raw[i])
+
+# Split the data into train and test sets
+sentences_train, sentences_test, labels_train, labels_test = train_test_split(sentences_raw, labels_raw, test_size=0.3)
+
+# 2. Tokenize the data
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts(sentences_train)
+sequences_train = tokenizer.texts_to_sequences(sentences_train)
+sequences_test = tokenizer.texts_to_sequences(sentences_test)
+
+# Pad sequences
+X_train = pad_sequences(sequences_train, maxlen=50)
+X_test = pad_sequences(sequences_test, maxlen=50)
+
+# Convert labels to one-hot encoding
+le = LabelEncoder()
+y_train = le.fit_transform(labels_train)
+y_test = le.transform(labels_test)
+
+# 3. Create CNN model
+model = Sequential()
+model.add(Embedding(input_dim=5000, output_dim=64, input_length=50))
+model.add(Conv1D(64, 5, activation='relu'))
+model.add(GlobalMaxPooling1D())
+model.add(Dense(10, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(len(all_intents), activation='softmax'))
+
+# 4. Train the model
+model.compile(optimizer=Adam(1e-4), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100)
+
+# 5. Save the trained model
+model.save("./data/cnn_model")
+```
+This code creates a simple CNN model with an embedding layer, a convolutional layer, a pooling layer, and two dense layers. The model is trained using the Adam optimizer and the sparse categorical cross-entropy loss function. The trained model is then saved to a file. The number of epochs, the learning rate, and the architecture of the CNN can be adjusted as needed.

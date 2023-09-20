@@ -108,6 +108,7 @@ if __name__ == "__main__":
                 # Extract potential files related to the selected issue
                 potentially_relevant_files, issue_body = extractFilesFromURL(selected_issue)
                 print("Potentially relevant files: ", potentially_relevant_files)
+                print('ISSUE: ', issue_body)
 
                 display_issue(selected_issue)
 
