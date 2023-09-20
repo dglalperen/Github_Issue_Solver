@@ -1,4 +1,5 @@
 import os
+import re
 
 from dotenv import load_dotenv
 from langchain import LLMChain, PromptTemplate
@@ -114,4 +115,19 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
         myfile.write(result + "\n")
         myfile.close()
 
+    # Extract only the code from the result
+    extracted_code = extract_code_from_text(result)
+
+    # Save the extracted code to a text file
+    with open("result/result_" + repo_name + ".txt", "a") as myfile:
+        myfile.write(extracted_code + "\n")
+        myfile.close()
+
     print("promptLangchain function completed.")
+
+
+def extract_code_from_text(text):
+    pattern = r"’’’python(.*?)’’’"
+    matches = re.findall(pattern, text, re.DOTALL)
+    code_only = '\n'.join(matches)
+    return code_only
