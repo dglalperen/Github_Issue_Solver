@@ -76,7 +76,7 @@ if __name__ == "__main__":
             exit(1)
 
         # Instantiate the GitHub API client
-        github_api = GithubAPI()
+        github_api = GithubAPI(GITHUB_API_KEY)
 
         # Fetch and display the issues from the given repository URL
         print(f"Fetching issues from {repo_url}...")
