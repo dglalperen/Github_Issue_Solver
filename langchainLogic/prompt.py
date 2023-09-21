@@ -16,7 +16,7 @@ from .retriever import CustomRetriever, deeplake_simsearch
 def promptLangchain(repoURL, promptBody, tags, related_files, type):
     print("Starting promptLangchain function...")
     load_dotenv()
-
+    vectordbsfolder = "vectordbs/"
     os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
 
     print("Initializing embeddings...")
@@ -26,8 +26,8 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
 
     # check if repo is already indexed
     ds_path = ""
-    if os.path.exists("vectordbs/" + repoURL.split("/")[-1]):
-        ds_path = "vectordbs/" + repoURL.split("/")[-1]
+    if os.path.exists(vectordbsfolder + repoURL.split("/")[-1]):
+        ds_path = vectordbsfolder + repoURL.split("/")[-1]
         print("repo already indexed")
 
 

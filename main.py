@@ -51,7 +51,7 @@ def process_related_files(files_list, repo_name):
         sanitized_item = item.replace("../repos/", "").replace("/repos/", "").replace("repos/", "")
 
         if not sanitized_item.startswith(prefix2):
-            sanitized_item = prefix2 + sanitized_item
+            sanitized_item = prefix2 + sanitizejd_item
 
         processed_files.append(prefix1 + sanitized_item)
 
@@ -126,8 +126,8 @@ if __name__ == "__main__":
                 else:
                     #https://github.com/kaan9700/chatbot/blob/main/chatbot_project/train.py,
                     # Combine user provided files with extracted files
-                    related_files_list = process_related_files(related_files_list, repo_name) + potentially_relevant_files
-
+                    #related_files_list = process_related_files(related_files_list, repo_name) + potentially_relevant_files
+                    print("--")
                 print("Related files: ", related_files_list)
 
                 # Determine the conversation context type
