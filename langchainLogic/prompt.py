@@ -127,7 +127,7 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
 
 
 def extract_code_from_text(text):
-    pattern = r"’’’python(.*?)’’’"
+    pattern = r'```(.*?)```'
     matches = re.findall(pattern, text, re.DOTALL)
     code_only = '\n'.join(matches)
     return code_only
