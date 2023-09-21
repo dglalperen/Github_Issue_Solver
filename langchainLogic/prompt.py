@@ -119,7 +119,7 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
     extracted_code = extract_code_from_text(result)
 
     # Save the extracted code to a text file
-    with open("result/result_" + repo_name + ".txt", "a") as myfile:
+    with open("result/code_" + repo_name + ".txt", "a") as myfile:
         myfile.write(extracted_code + "\n")
         myfile.close()
 
@@ -127,7 +127,7 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
 
 
 def extract_code_from_text(text):
-    pattern = r'```(.*?)```'
+    pattern = r'```(?:\w+)?(.*?)```'
     matches = re.findall(pattern, text, re.DOTALL)
     code_only = '\n'.join(matches)
     return code_only
