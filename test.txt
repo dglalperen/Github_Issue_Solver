@@ -1,0 +1,1 @@
+Automate the GCP project creation so users dont have to open a browser to create a GCP project and to ensure the Cloud Build API is enabled.

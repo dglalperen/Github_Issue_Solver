@@ -80,15 +80,15 @@ if __name__ == "__main__":
 
         # Fetch and display the issues from the given repository URL
         print(f"Fetching issues from {repo_url}...")
-        issues = github_api.get_issues(repo_url)
-        if not issues:
-            print("No issues found or an error occurred. Exiting.")
-            exit(1)
-
-        # Display the number of found issues
-        print(f"Found {len(issues)} issues.")
-        issue_handler = IssueHandler(issues)
-        issue_handler.display_issues()
+        # issues = github_api.get_issues(repo_url)
+        # if not issues:
+        #     print("No issues found or an error occurred. Exiting.")
+        #     exit(1)
+        #
+        # # Display the number of found issues
+        # print(f"Found {len(issues)} issues.")
+        # issue_handler = IssueHandler(issues)
+        # issue_handler.display_issues()
 
     except Exception as e:
         # Handle unexpected errors during initialization or API calls
@@ -97,20 +97,29 @@ if __name__ == "__main__":
 
     # Extract the repository name from the provided URL
     repo_name = repo_url.split("/")[-1]
-
+    with open("test.txt", "r") as file:
+        issue_body = file.read()
+        file.close()
     # Continuously process issues until exit conditions are met
     while True:
         try:
             # Select an issue using the issue handler
-            selected_issue = issue_handler.select_issue()
+            selected_issue = issue_body
 
             if selected_issue:
-                # Extract potential files related to the selected issue
-                potentially_relevant_files, issue_body = extractFilesFromURL(selected_issue)
-                print("Potentially relevant files: ", potentially_relevant_files)
+
+                #read test.txt and save it to issue_body
+                with open("test.txt", "r") as file:
+                    issue_body = file.read()
+                    file.close()
                 print('ISSUE: ', issue_body)
 
-                display_issue(selected_issue)
+                # Extract potential files related to the selected issue
+                #potentially_relevant_files, issue_body = extractFilesFromURL(selected_issue)
+                print("Potentially relevant files: ")
+                print('ISSUE: ', issue_body)
+
+                #display_issue(selected_issue)
 
                 # Get tags associated with the issue from the user
                 tags = input("Please enter the tags for the issue, seperated with ',': ")
@@ -122,7 +131,7 @@ if __name__ == "__main__":
 
                 # If no files were provided, use the extracted files
                 if related_files_list == ['']:
-                    related_files_list = potentially_relevant_files
+                    related_files_list = potentially_relevant_files=[]
                 else:
                     #https://github.com/kaan9700/chatbot/blob/main/chatbot_project/train.py,
                     # Combine user provided files with extracted files
