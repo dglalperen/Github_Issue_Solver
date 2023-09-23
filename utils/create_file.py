@@ -1,3 +1,6 @@
+import os
+
+
 def create_new_file(relative_path, initial_content):
     # Resolve the full path relative to the script
     full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)

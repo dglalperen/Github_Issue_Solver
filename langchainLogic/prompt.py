@@ -13,6 +13,13 @@ from langchainLogic.indexer import indexRepo
 from .retriever import CustomRetriever, deeplake_simsearch
 
 
+def extract_code_from_text(text):
+    pattern = r'```(?:\w+)?(.*?)```'
+    matches = re.findall(pattern, text, re.DOTALL)
+    code_only = '\n'.join(matches)
+    return code_only
+
+
 def promptLangchain(repoURL, promptBody, tags, related_files, type):
     print("Starting promptLangchain function...")
     load_dotenv()
@@ -50,7 +57,7 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
     merged_sources = set(unique_issue_sources).union(set(related_files))
 
     # Konvertiere das Set wieder in eine Liste
-    final_source_list = list(merged_sources)
+    final_source_list = list(set(list(merged_sources)))
 
     print("Configuring retriever...")
     retriever, context = CustomRetriever(final_source_list, ds_path)
@@ -88,22 +95,28 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
             result = results["answer"]
 
     if type == "context":
+        text = """
+                Try to resolve the issue in the given text with the given code in the best way you are able to. 
+                Make sure that the changes of all files (if more than one need to be edited) are output one after the other and for each script the appropriate JSON should be output:
+                Edit the existing code and also use the functions and methods that are already in use, unless you need to develop new ones. It is also of the utmost importance to make sure to keep the imports from other files of the project. 
+                Your output should be a Git Patch file. 
+                add a JSON object at the end in the following format:
+                
+                {
+                'source': '<source>'
+                }
+                
+                where source is the path from the source of the metadata
+                """
+
         prompt_template = PromptTemplate(
             input_variables=["text"],
-            template="""
-        Try to resolve the issue in the given text with the given code in the best way you are able to. 
-        Edit the existing code and also use the functions and methods that are already in use, unless you need to develop new ones
-        Only provide the Source code as answer:
-        
-        {text}
-        """
+            template='{text}'
         )
-        inputs = {
-            "text": promptBody + '\n' + str(context)
-        }
 
-        chain = LLMChain(llm=model, memory=memory, prompt=prompt_template, verbose=True)
-        result = chain.run(inputs)
+
+        chain = LLMChain(llm=model, memory=memory, prompt=prompt_template, verbose=False)
+        result = chain.run(text=text + '\n' + promptBody + '\n' + str(context))
 
     print(result)
     print("Appending result to text file...")
@@ -111,23 +124,16 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
     # save result to text file with reponame
     repo_name = repoURL.split("/")[-1]
 
-    with open("result/result_" + repo_name + ".txt", "a") as myfile:
-        myfile.write(result + "\n")
-        myfile.close()
 
     # Extract only the code from the result
     extracted_code = extract_code_from_text(result)
 
     # Save the extracted code to a text file
-    with open("result/code_" + repo_name + ".txt", "a") as myfile:
+    with open("result/result_" + repo_name + ".txt", "a") as myfile:
         myfile.write(extracted_code + "\n")
         myfile.close()
 
     print("promptLangchain function completed.")
 
 
-def extract_code_from_text(text):
-    pattern = r'```(?:\w+)?(.*?)```'
-    matches = re.findall(pattern, text, re.DOTALL)
-    code_only = '\n'.join(matches)
-    return code_only
+

@@ -56,7 +56,7 @@ def modify_file_replace_code(base_directory, relative_path, old_code_block, new_
     
 if __name__ == "__main__":
     relative_path = "test.py"
-    base_directory = "/Users/dglalperen/PycharmProjects/Github_Issue_Solver/repos/dglalperen/somerepo"
+    base_directory = "../repos/chatbot"
     old_code = """def factorial(n):
     if n == 0:
         return 1

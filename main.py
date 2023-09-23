@@ -40,22 +40,6 @@ def display_issue(issue):
     print(f'\n{issue["body"]}\n')
 
 
-def process_related_files(files_list, repo_name):
-    """Process and standardize file paths in the given list."""
-    prefix1 = "../repos/"
-    prefix2 = repo_name + "/"
-
-    processed_files = []
-
-    for item in files_list:
-        sanitized_item = item.replace("../repos/", "").replace("/repos/", "").replace("repos/", "")
-
-        if not sanitized_item.startswith(prefix2):
-            sanitized_item = prefix2 + sanitizejd_item
-
-        processed_files.append(prefix1 + sanitized_item)
-
-    return processed_files
 
 
 
@@ -70,7 +54,8 @@ if __name__ == "__main__":
             exit(1)  # Exit with a non-zero status to indicate an error
 
         # Get the GitHub repository URL from the user
-        repo_url = input("Please enter the GitHub repository URL: ")
+        #repo_url = input("Please enter the GitHub repository URL: ")
+        repo_url = 'https://github.com/kaan9700/chatbot'
         if not repo_url:
             print("Repository URL not provided. Exiting.")
             exit(1)

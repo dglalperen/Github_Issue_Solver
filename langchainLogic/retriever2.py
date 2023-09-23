@@ -99,7 +99,6 @@ def deeplake_simsearch(embeddings, dataset_path, query, k):
     docs = (db.similarity_search(query=query, k=k))
     return docs
 
-"""files = ['train.py']
+files = ['train.py']
 dataset_path = "../vectordbs/chatbot"
 CustomRetriever(files, dataset_path," a CNN should be used instead of the BERT model in the train.py script, because it can handle the type of data better.")
-"""
