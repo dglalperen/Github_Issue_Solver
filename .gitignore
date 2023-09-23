@@ -7,4 +7,8 @@ test.py
 *.pyo
 *.pyd
 __pycache__/
+*.cpython-*.pyc
+.DS_Store
+
+
 
