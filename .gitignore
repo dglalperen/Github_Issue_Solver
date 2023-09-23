@@ -3,3 +3,8 @@ repos
 .env
 __pycache__
 test.py
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
