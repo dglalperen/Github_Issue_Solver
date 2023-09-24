@@ -26,43 +26,19 @@ def process_result_txt(pfad_zur_datei):
 
     return code_json_paare
 
+def replace_file_content(file_path, new_content):
+    """
+    Replaces the content of a file.
 
-def apply_patch(source_file, patch_file):
-    try:
-        # Repository initialisieren, wenn es noch nicht existiert
-        if not os.path.exists('.git'):
-            subprocess.run(['git', 'init'], check=True)
+    Parameters:
+    - file_path: Path to the file whose content should be replaced.
+    - new_content: The new content to fill the file with.
+    """
+    print(f"Replacing content of file '{file_path}'...")
+    with open(file_path, 'w') as file:
+        file.write(new_content)
 
-        parts = os.path.normpath(source_file).split(os.sep)
 
-        # Die letzten 3 Teile des Pfades extrahieren
-        desired_path = os.path.join(*parts[-3:])
-
-        # Temporäre Datei erstellen, um den Inhalt von source_file zu kopieren
-        temp_file = '../pull_code/' + desired_path
-
-        # Stellen Sie sicher, dass das Verzeichnis existiert
-        os.makedirs(os.path.dirname(temp_file), exist_ok=True)
-
-        with open(source_file, 'r') as f_in, open(temp_file, 'w') as f_out:
-            f_out.write(f_in.read())
-
-        # Datei zum Repo hinzufügen und committen
-        subprocess.run(['git', 'add', temp_file], check=True)
-        subprocess.run(['git', 'commit', '-m', 'Temporary commit'], check=True)
-
-        # Patch anwenden
-        with open(patch_file, 'r') as f:
-            subprocess.run(['git', 'apply', '--whitespace=fix'], input=f.read(), text=True, check=True)
-
-        # Aufräumen
-        os.remove(temp_file)
-        subprocess.run(['git', 'reset', '--hard', 'HEAD~1'], check=True)  # Letzten Commit entfernen
-
-    except subprocess.CalledProcessError:
-        pass
-
-    return True
 
 
 if __name__ == '__main__':
@@ -72,6 +48,6 @@ if __name__ == '__main__':
     # Aufruf der Funktion
     for paar in paare:
 
-        apply_patch(paar['json']['source'], filename)
+        replace_file_content(paar['json']['source'], paar['code'])
 
 

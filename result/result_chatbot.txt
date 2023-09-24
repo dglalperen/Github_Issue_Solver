@@ -1,13 +1,11 @@
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Embedding, Conv1D, GlobalMaxPooling1D
+from tensorflow.keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dense
+from tensorflow.keras.preprocessing.text import Tokenizer
 from sklearn.model_selection import train_test_split
 from functions import read_database, label_encoding, process_text
-from sklearn.preprocessing import LabelEncoder
+from tensorflow.keras.utils import to_categorical
 
 # 1. Load and preprocess data
 sentences_raw, labels_raw, all_intents = read_database('../../db.sqlite3')
@@ -17,162 +15,42 @@ for i in range(len(sentences_raw)):
 # Split the data into train and test sets
 sentences_train, sentences_test, labels_train, labels_test = train_test_split(sentences_raw, labels_raw, test_size=0.3)
 
-# 2. Tokenize the data using Keras tokenizer
+# 2. Tokenize the data
 tokenizer = Tokenizer(num_words=5000, oov_token="<OOV>")
 tokenizer.fit_on_texts(sentences_train)
 word_index = tokenizer.word_index
 train_sequences = tokenizer.texts_to_sequences(sentences_train)
 test_sequences = tokenizer.texts_to_sequences(sentences_test)
 
-# Pad the sequences
+# Padding sequences
 train_padded = pad_sequences(train_sequences, maxlen=50, padding='post', truncating='post')
 test_padded = pad_sequences(test_sequences, maxlen=50, padding='post', truncating='post')
 
-# Convert labels to tensors
-le = LabelEncoder()
-train_labels = le.fit_transform(labels_train)
-test_labels = le.transform(labels_test)
+# Convert labels to one-hot vectors
+y_train = label_encoding(labels_train)
+y_test = label_encoding(labels_test)
+train_labels = to_categorical(y_train)
+test_labels = to_categorical(y_test)
 
-# 3. Create CNN model
-model = Sequential([
-    Embedding(5000, 64, input_length=50),
-    Conv1D(128, 5, activation='relu'),
-    GlobalMaxPooling1D(),
-    Dense(64, activation='relu'),
-    Dense(len(all_intents), activation='softmax')
-])
+# 3. Create a CNN model
+model = Sequential()
+model.add(Embedding(5000, 64, input_length=50))
+model.add(Conv1D(128, 5, activation='relu'))
+model.add(GlobalMaxPooling1D())
+model.add(Dense(32, activation='relu'))
+model.add(Dense(len(all_intents), activation='softmax'))
+
+# Compile the model
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 # 4. Train the model
-model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.fit(train_padded, train_labels, epochs=100, validation_data=(test_padded, test_labels))
+model.fit(train_padded, train_labels, epochs=10, validation_data=(test_padded, test_labels))
 
 # 5. Save the trained model
 model.save("./data/cnn_model")
 
 
---- a/train.py
-+++ b/train.py
-@@ -1,30 +1,31 @@
--import numpy as np
--import torch
--from transformers import BertTokenizer, BertForSequenceClassification
--from sklearn.model_selection import train_test_split
--from functions import read_database, label_encoding, process_text
--from torch.utils.data import DataLoader, TensorDataset, RandomSampler, SequentialSampler
-+import numpy as np
-+import tensorflow as tf
-+from tensorflow.keras.preprocessing.text import Tokenizer
-+from tensorflow.keras.preprocessing.sequence import pad_sequences
-+from tensorflow.keras.models import Sequential
-+from tensorflow.keras.layers import Dense, Embedding, Conv1D, GlobalMaxPooling1D
-+from sklearn.model_selection import train_test_split
-+from functions import read_database, label_encoding, process_text
-+from sklearn.preprocessing import LabelEncoder
-
- # 1. Load and preprocess data
- sentences_raw, labels_raw, all_intents = read_database('../../db.sqlite3')
- for i in range(len(sentences_raw)):
-     sentences_raw[i] = process_text(sentences_raw[i])
-
- # Split the data into train and test sets
- sentences_train, sentences_test, labels_train, labels_test = train_test_split(sentences_raw, labels_raw, test_size=0.3)
-
--# 2. Tokenize the data using BERT tokenizer
--tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
--train_encodings = tokenizer(sentences_train, truncation=True, padding=True, max_length=50, return_tensors="pt")
--test_encodings = tokenizer(sentences_test, truncation=True, padding=True, max_length=50, return_tensors="pt")
-+# 2. Tokenize the data using Keras tokenizer
-+tokenizer = Tokenizer(num_words=5000, oov_token="<OOV>")
-+tokenizer.fit_on_texts(sentences_train)
-+word_index = tokenizer.word_index
-+train_sequences = tokenizer.texts_to_sequences(sentences_train)
-+test_sequences = tokenizer.texts_to_sequences(sentences_test)
-
--# Convert labels to tensors
--y_train = label_encoding(labels_train)
--y_test = label_encoding(labels_test)
--train_labels = torch.tensor(y_train)
--test_labels = torch.tensor(y_test)
-+# Pad the sequences
-+train_padded = pad_sequences(train_sequences, maxlen=50, padding='post', truncating='post')
-+test_padded = pad_sequences(test_sequences, maxlen=50, padding='post', truncating='post')
-
--# Create DataLoader for training and validation data
--train_dataset = TensorDataset(train_encodings.input_ids, train_encodings.attention_mask, train_labels)
--train_loader = DataLoader(train_dataset, sampler=RandomSampler(train_dataset), batch_size=8)
--test_dataset = TensorDataset(test_encodings.input_ids, test_encodings.attention_mask, test_labels)
--test_loader = DataLoader(test_dataset, sampler=SequentialSampler(test_dataset), batch_size=8)
-+# Convert labels to tensors
-+le = LabelEncoder()
-+train_labels = le.fit_transform(labels_train)
-+test_labels = le.transform(labels_test)
-
--# 3. Create BERT model for sequence classification
--num_labels = len(all_intents)
--model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_labels)
--model.train()
-+# 3. Create CNN model
-+model = Sequential([
-+    Embedding(5000, 64, input_length=50),
-+    Conv1D(128, 5, activation='relu'),
-+    GlobalMaxPooling1D(),
-+    Dense(64, activation='relu'),
-+    Dense(len(all_intents), activation='softmax')
-+])
-
--# 4. Train the model
--optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
--for epoch in range(100):  # Number of epochs can be adjusted
--    for batch in train_loader:
--        optimizer.zero_grad()
--        input_ids, attention_mask, labels = batch
--        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
--        loss = outputs.loss
--        loss.backward()
--        optimizer.step()
-+# 4. Train the model
-+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-+model.fit(train_padded, train_labels, epochs=100, validation_data=(test_padded, test_labels))
-
--# Validation after each epoch
--    model.eval()  # Set the model to evaluation mode
--    correct = 0
--    total = 0
--    with torch.no_grad():
--        for batch in test_loader:
--            input_ids, attention_mask, labels = batch
--            outputs = model(input_ids, attention_mask=attention_mask)
--            _, predicted = torch.max(outputs.logits, 1)
--            total += labels.size(0)
--            correct += (predicted == labels).sum().item()
-+# 5. Save the trained model
-+model.save("./data/cnn_model")
-
--    accuracy = correct / total
--    print(f'Validation Accuracy after epoch {epoch + 1}: {accuracy:.2f}')
--    model.train()  # Set the model back to training mode
--
--# 5. Save the trained model
--model.save_pretrained("./data/bert_model")
--tokenizer.save_pretrained("./data/bert_model")
--
--# Final test accuracy after training
--model.eval()
--correct = 0
--total = 0
--with torch.no_grad():
--    for batch in test_loader:
--        input_ids, attention_mask, labels = batch
--        outputs = model(input_ids, attention_mask=attention_mask)
--        _, predicted = torch.max(outputs.logits, 1)
--        total += labels.size(0)
--        correct += (predicted == labels).sum().item()
--
--final_accuracy = correct / total
--print(f'Final Test Accuracy: {final_accuracy:.2f}')
-
-
 {
-  "source": "../repos/chatbot/chatbot_project/train.py"
+    "source": "repos/chatbot/chatbot_project/train.py"
 }
 

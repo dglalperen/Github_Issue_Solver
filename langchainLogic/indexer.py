@@ -60,7 +60,7 @@ def indexRepo(repoURL):
 
     # chunk the files
 
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=20)
+    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=0)
     texts = text_splitter.split_documents(docs)
 
     # Adding chunk ID to metadata
@@ -76,6 +76,6 @@ def indexRepo(repoURL):
 
 
 
-# if __name__ == "__main__":
-#     repoURL = "https://github.com/kaan9700/chatbot"
-#     indexRepo(repoURL)
+if __name__ == "__main__":
+     repoURL = "https://github.com/kaan9700/chatbot"
+     indexRepo(repoURL)

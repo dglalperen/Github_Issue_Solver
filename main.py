@@ -93,7 +93,6 @@ if __name__ == "__main__":
                 # Extract potential files related to the selected issue
                 potentially_relevant_files, issue_body = extractFilesFromURL(selected_issue)
                 print("Potentially relevant files: ", potentially_relevant_files)
-                print('ISSUE: ', issue_body)
 
                 display_issue(selected_issue)
 
@@ -121,6 +120,10 @@ if __name__ == "__main__":
                 try:
                     # Process the selected issue with the provided context
                     promptLangchain(repo_url, issue_body, tags_list, related_files_list, context_type)
+
+
+                    # push request von Alpi
+
                 except ValueError as ve:
                     # Handle potential errors during issue processing
                     import traceback
@@ -132,7 +135,9 @@ if __name__ == "__main__":
 
                 # Ask the user if they want to fork the repository
                 user_decision = input("Do you want to fork the repository? (y/n): ")
+
                 if user_decision.lower() == 'y':
+
                     fork_repo(GITHUB_API_KEY, repo_url)
                 else:
                     print("Skipping forking.")

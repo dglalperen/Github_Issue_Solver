@@ -10,6 +10,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 
 from langchainLogic.indexer import indexRepo
+from utils.patch_processor import process_result_txt, replace_file_content
 from .retriever import CustomRetriever, deeplake_simsearch
 
 
@@ -96,17 +97,16 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
 
     if type == "context":
         text = """
-                Try to resolve the issue in the given text with the given code in the best way you are able to. 
-                Make sure that the changes of all files (if more than one need to be edited) are output one after the other and for each script the appropriate JSON should be output:
-                Edit the existing code and also use the functions and methods that are already in use, unless you need to develop new ones. It is also of the utmost importance to make sure to keep the imports from other files of the project. 
-                Your output should be a Git Patch file. 
-                add a JSON object at the end in the following format:
-                
-                {
-                'source': '<source>'
-                }
-                
-                where source is the path from the source of the metadata
+Try to solve the issue in the given text as best you can with the given code. 
+Edit the existing code and also use the functions and methods already used, unless you need to develop new ones. It is also very important that you keep imports from other files in the project. 
+Your output should show the whole file without truncations when modifying a file, even if changes are made in multiple files. 
+Please make sure you add a JSON object at the end in the following format:
+
+{
+    'source': '<source>'
+}
+
+Where 'source' is the source from the metadata of the original file. 
                 """
 
         prompt_template = PromptTemplate(
@@ -133,6 +133,11 @@ def promptLangchain(repoURL, promptBody, tags, related_files, type):
         myfile.write(extracted_code + "\n")
         myfile.close()
 
+
+    code_json_pair = process_result_txt("result/result_" + repo_name + ".txt")
+
+    for pair in code_json_pair:
+        replace_file_content(pair['json']['source'], pair['code'])
     print("promptLangchain function completed.")
 
 
