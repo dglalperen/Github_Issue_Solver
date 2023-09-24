@@ -22,7 +22,7 @@ class GithubAPI:
         try:
             # Access the existing local repository
             username, repo_name = extract_github_details(forked_repo_url)
-            local_path = f"../repos/{username}/{repo_name}"
+            local_path = f"repos/{repo_name}"
             repo = git.Repo(local_path)
             
             # Check if the repo is dirty (i.e., has uncommitted changes)
