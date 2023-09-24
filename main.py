@@ -40,7 +40,8 @@ def display_issue(issue):
     print(f'\n{issue["body"]}\n')
 
 
-
+def confirm_action(message):
+    return input(f"{message} (y/n): ").strip().lower() == 'y'
 
 
 if __name__ == "__main__":
@@ -55,8 +56,9 @@ if __name__ == "__main__":
 
         # Get the GitHub repository URL from the user
         #repo_url = input("Please enter the GitHub repository URL: ")
-        repo_url = 'https://github.com/kaan9700/chatbot'
-        if not repo_url:
+        original_repo_url = 'https://github.com/kaan9700/chatbot'
+        forked_repo_url = ""
+        if not original_repo_url:
             print("Repository URL not provided. Exiting.")
             exit(1)
 
@@ -64,8 +66,8 @@ if __name__ == "__main__":
         github_api = GithubAPI()
 
         # Fetch and display the issues from the given repository URL
-        print(f"Fetching issues from {repo_url}...")
-        issues = github_api.get_issues(repo_url)
+        print(f"Fetching issues from {original_repo_url}...")
+        issues = github_api.get_issues(original_repo_url)
         if not issues:
             print("No issues found or an error occurred. Exiting.")
             exit(1)
@@ -81,7 +83,7 @@ if __name__ == "__main__":
         exit(1)
 
     # Extract the repository name from the provided URL
-    repo_name = repo_url.split("/")[-1]
+    repo_name = original_repo_url.split("/")[-1]
 
     # Continuously process issues until exit conditions are met
     while True:
@@ -118,12 +120,32 @@ if __name__ == "__main__":
                 context_type = input("Do you want to use a retrieval (type --> retriever) or a context (type --> context) based Conversation: ")
 
                 try:
-                    # Process the selected issue with the provided context
-                    promptLangchain(repo_url, issue_body, tags_list, related_files_list, context_type)
-
-
-                    # push request von Alpi
-
+                    # Ask the user if they want to fork the repository to further process the issue
+                    user_decision = input("Do you want to fork and process the issue? (y/n): ")
+                    if user_decision.lower() == 'y':
+                        forked_repo_url = fork_repo(GITHUB_API_KEY, original_repo_url)
+                        
+                        # Process the selected issue with the provided context
+                        promptLangchain(forked_repo_url, issue_body, tags_list, related_files_list, context_type)
+                        
+                        # Commit and push the changes to the forked repository
+                        user_decision = input("Do you want to commit the generated code? (y/n): ")
+                        if user_decision.lower() == 'y':
+                            github_api.commit_and_push(forked_repo_url, "Generated code", "test-branch")
+                        else:
+                            print("Skipping commit.")
+                        
+                        # Create a pull request with the generated code
+                        user_decision = input("Do you want to create a pull request? (y/n): ")
+                        if user_decision.lower() == 'y':
+                            create_pull_request(GITHUB_API_KEY, original_repo_url, "test-branch", "main", "Pull Request Test", "Pull Request Body")
+                        else:
+                            print("Skipping pull request.")
+                    else:
+                        print("Skipping forking.")
+                    
+                    
+                    
                 except ValueError as ve:
                     # Handle potential errors during issue processing
                     import traceback
@@ -133,14 +155,7 @@ if __name__ == "__main__":
                 # Indicate successful processing of the issue
                 print("Issue processed and result saved in '../result/result.txt' file.")
 
-                # Ask the user if they want to fork the repository
-                user_decision = input("Do you want to fork the repository? (y/n): ")
-
-                if user_decision.lower() == 'y':
-
-                    fork_repo(GITHUB_API_KEY, repo_url)
-                else:
-                    print("Skipping forking.")
+                
 
             else:
                 # If no issue was selected or user wishes to exit
