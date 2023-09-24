@@ -130,17 +130,30 @@ if __name__ == "__main__":
                         
                         # Commit and push the changes to the forked repository
                         user_decision = input("Do you want to commit the generated code? (y/n): ")
+
                         if user_decision.lower() == 'y':
-                            github_api.commit_and_push(forked_repo_url, "Generated code", "test-branch")
+                            commit_message = input("Please enter the commit message: ")
+                            branch_name = input("Please enter the branch name to push the changes: ")
+
+                            # Assuming `github_api.commit_and_push` takes three arguments: repo_url, commit_message, and branch_name
+                            github_api.commit_and_push(forked_repo_url, commit_message, branch_name)
                         else:
                             print("Skipping commit.")
+
                         
                         # Create a pull request with the generated code
                         user_decision = input("Do you want to create a pull request? (y/n): ")
+
                         if user_decision.lower() == 'y':
-                            create_pull_request(GITHUB_API_KEY, original_repo_url, "test-branch", "main", "Pull Request Test", "Pull Request Body")
+                            head_branch = input("Please enter the head branch name: ")
+                            base_branch = input("Please enter the base branch name: ")
+                            pr_title = input("Please enter the title for the pull request: ")
+                            pr_body = input("Please enter the body for the pull request: ")
+                            
+                            create_pull_request(GITHUB_API_KEY, original_repo_url, head_branch, base_branch, pr_title, pr_body)
                         else:
                             print("Skipping pull request.")
+
                     else:
                         print("Skipping forking.")
                     
