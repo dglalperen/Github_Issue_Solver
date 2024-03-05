@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from langchain.document_loaders import TextLoader
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain.vectorstores import DeepLake, Chroma
 from langchain.embeddings.openai import OpenAIEmbeddings
 
@@ -13,59 +13,69 @@ from utils.fetchRepos import getRepo
 
 def indexRepo(repoURL):
     load_dotenv()
-
+    vectordbsfolder = "vectordbs/"
     os.environ['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
 
-    #Set to true if you want to include documentation files
-    documentation = True
+    # Set to true if you want to include documentation files
 
     embeddings = OpenAIEmbeddings(disallowed_special=())
     repoDir = getRepo(repoURL)
 
-    #load files in repo
+    # load files in repo
     root_dir = repoDir
-    #root_dir = getTestRepo()
-    print("project directory is: "+root_dir)
-    #get name of repo
+    print("project directory is: " + root_dir)
+    # get name of repo
     repo_name = root_dir.split("/")[-1]
-    print("repo name is: "+repo_name)
+    print("repo name is: " + repo_name)
 
-    #check if repo is already indexed
-    if os.path.exists("vectordbs/"+repo_name):
+    # check if repo is already indexed
+    if os.path.exists(vectordbsfolder + repo_name):
         print("repo already indexed")
-        return str("vectordbs/"+repo_name)
+        return str(vectordbsfolder + repo_name)
 
     fileextensions = [
-    ".ts", ".json", ".js", ".jsx", ".tsx", ".html", ".css", ".scss", ".less", ".py", ".java", ".cpp", ".h", ".c",
-    ".cs", ".go", ".php", ".rb", ".swift", ".kt", ".dart", ".rs", ".sh", ".yml", ".yaml", ".xml", ".txt"]
-
-    if documentation:
-        fileextensions.append("README.md")
-        repo_name = repo_name + "_doc"
-        print("added documentation files to index")
+        ".ts", ".json", ".js", ".jsx", ".tsx", ".html", ".css", ".scss", ".less", ".py", ".java", ".cpp", ".h", ".c",
+        ".cs", ".go", ".php", ".rb", ".swift", ".kt", ".dart", ".rs", ".sh", ".txt"]
 
     docs = []
     for dirpath, dirnames, filenames in os.walk(root_dir):
         for file in filenames:
-            #ignore node_modules and package-lock.json
-            if "node_modules" in dirpath or "package-lock.json" in file:
+            # ignore node_modules and package-lock.json
+            if ("node_modules" in dirpath or
+                    '.idea' in dirpath or
+                    '__pycache__' in dirpath or
+                    "package-lock.json" in file):
                 continue
-            #ignore files that are not of the specified file extensions
+            # ignore files that are not of the specified file extensions
             if file.endswith(tuple(fileextensions)):
                 try:
                     loader = TextLoader(os.path.join(dirpath, file), encoding='utf-8')
-                    docs.extend(loader.load_and_split())
-                    for doc in docs:
+                    current_docs = loader.load_and_split()
+                    for doc in current_docs:
                         doc.metadata['file_name'] = file
+                    docs.extend(current_docs)
                 except Exception as e:
+                    print(e)
                     pass
 
-    #chunk the files
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=20)
+    # chunk the files
+
+    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=0)
     texts = text_splitter.split_documents(docs)
 
-    #embed the files and add them to the vector db
-    db = DeepLake(dataset_path="vectordbs/"+repo_name, embedding_function=embeddings) #dataset would be publicly available
+    # Adding chunk ID to metadata
+    for idx, text in enumerate(texts):
+        text.metadata['chunk_id'] = idx
+
+    print("Number of chunks: ", len(texts))
+    # embed the files and add them to the vector db
+    db = DeepLake(dataset_path=vectordbsfolder + repo_name, embedding=embeddings)
     db.add_documents(texts)
 
-    return str("vectordbs/"+repo_name)
+    return str(vectordbsfolder + repo_name)
+
+
+
+if __name__ == "__main__":
+     repoURL = "https://github.com/kaan9700/chatbot"
+     indexRepo(repoURL)
